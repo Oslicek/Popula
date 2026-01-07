@@ -22,6 +22,18 @@ const UK_POPULATION_CSV_URL = '/sample-data/2022 SNPP Population persons.csv';
 const REGION_FILL_COLOR: [number, number, number, number] = [255, 64, 128, 160]; // bright magenta, semi-opaque
 const REGION_LINE_COLOR: [number, number, number, number] = [255, 255, 255, 255]; // white outline
 const REGION_HOVER_COLOR: [number, number, number, number] = [255, 214, 64, 220]; // gold on hover
+const DENSITY_COLORS: [number, number, number, number][] = [
+  [247, 251, 255, 200],
+  [222, 235, 247, 205],
+  [198, 219, 239, 210],
+  [158, 202, 225, 215],
+  [107, 174, 214, 220],
+  [66, 146, 198, 225],
+  [33, 113, 181, 230],
+  [8, 81, 156, 235],
+  [8, 48, 107, 240],
+  [3, 19, 43, 245]
+];
 
 export function Map() {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -77,15 +89,16 @@ export function Map() {
         return response.text();
       })
       .then(text => {
-        const latestYear = getLastYearFromCsv(text) ?? '2047';
         const parsed = parsePopulationCsvByYear(text);
+        const latestYear = getLastYearFromCsv(text) ?? parsed.years[parsed.years.length - 1] ?? '2047';
+        const preferredYear = parsed.years.find((y) => y === '2022') ?? parsed.years[0] ?? latestYear;
         setPopulationYears(parsed.years);
-        setPopulationYear(latestYear);
+        setPopulationYear(preferredYear);
         setPopulationByYear(parsed.byYear);
-        const map = parsed.byYear.get(latestYear) ?? new Map();
+        const map = parsed.byYear.get(preferredYear) ?? new Map();
         setPopulationByCode(map);
         setPopulationLoading(false);
-        console.log(`[Map] Loaded population CSV, latest year ${latestYear}, areas ${map.size}`);
+        console.log(`[Map] Loaded population CSV, default year ${preferredYear}, areas ${map.size}`);
       })
       .catch(error => {
         console.error('[Map] Failed to load population CSV:', error);
@@ -515,11 +528,13 @@ export function Map() {
         <h3>Legend</h3>
         <div className={styles.legend}>
           <div className={styles.legendRow}>
-            <span className={styles.legendSwatch} style={{ background: 'rgba(237,248,251,0.8)' }} />
-            <span className={styles.legendSwatch} style={{ background: 'rgba(191,211,230,0.86)' }} />
-            <span className={styles.legendSwatch} style={{ background: 'rgba(158,188,218,0.9)' }} />
-            <span className={styles.legendSwatch} style={{ background: 'rgba(117,107,177,0.92)' }} />
-            <span className={styles.legendSwatch} style={{ background: 'rgba(84,39,143,0.94)' }} />
+            {DENSITY_COLORS.map((c, idx) => (
+              <span
+                key={`legend-${idx}`}
+                className={styles.legendSwatch}
+                style={{ background: `rgba(${c[0]},${c[1]},${c[2]},${c[3] / 255})` }}
+              />
+            ))}
             <span className={styles.legendLabel}>Higher population density →</span>
           </div>
           <div className={styles.legendRow}>
