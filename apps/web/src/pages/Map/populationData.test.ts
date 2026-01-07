@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { FeatureCollection, Geometry } from 'geojson';
-import { parsePopulationCsv, augmentFeaturesWithPopulation, createPopulationColorScale, getLastYearFromCsv } from './populationData';
+import { parsePopulationCsv, augmentFeaturesWithPopulation, createPopulationColorScale, getLastYearFromCsv, parsePopulationCsvByYear } from './populationData';
 import type { RegionProperties } from './types';
 
 const sampleCsv = [
@@ -61,6 +61,13 @@ describe('populationData helpers', () => {
   it('extracts the latest year from the CSV header', () => {
     const year = getLastYearFromCsv(sampleCsv);
     expect(year).toBe('2023');
+  });
+
+  it('parses all years and aggregates per year', () => {
+    const { years, byYear } = parsePopulationCsvByYear(sampleCsv);
+    expect(years).toEqual(['2022', '2023']);
+    expect(byYear.get('2022')?.get('E06000001')).toBe(220);
+    expect(byYear.get('2023')?.get('E06000002')).toBe(210);
   });
 });
 

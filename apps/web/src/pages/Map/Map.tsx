@@ -5,7 +5,12 @@ import { MapboxOverlay } from '@deck.gl/mapbox';
 import { GeoJsonLayer } from '@deck.gl/layers';
 import type { Feature, Geometry } from 'geojson';
 import { reprojectFeatureCollection27700ToWgs84 } from './reprojection';
-import { augmentFeaturesWithPopulation, createPopulationColorScale, getLastYearFromCsv, parsePopulationCsv } from './populationData';
+import {
+  augmentFeaturesWithPopulation,
+  createPopulationColorScale,
+  getLastYearFromCsv,
+  parsePopulationCsvByYear
+} from './populationData';
 import type { RegionProperties } from './types';
 import styles from './Map.module.css';
 
@@ -33,11 +38,15 @@ export function Map() {
   const [regionsLoading, setRegionsLoading] = useState(true);
   const [regionsError, setRegionsError] = useState<string | null>(null);
   const [populationByCode, setPopulationByCode] = useState<Map<string, number> | null>(null);
+  const [populationByYear, setPopulationByYear] = useState<Map<string, Map<string, number>> | null>(null);
   const [populationLoading, setPopulationLoading] = useState(true);
   const [populationError, setPopulationError] = useState<string | null>(null);
   const [populationYear, setPopulationYear] = useState<string | null>(null);
+  const [populationYears, setPopulationYears] = useState<string[]>([]);
   const [layerFeatures, setLayerFeatures] = useState<Feature<Geometry, RegionProperties>[] | null>(null);
   const [hoverInfo, setHoverInfo] = useState<{ name: string; population: number | null; density: number | null; areaSqKm: number | null } | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [animationSpeed, setAnimationSpeed] = useState(500);
 
   // Load GeoJSON data
   useEffect(() => {
@@ -69,8 +78,11 @@ export function Map() {
       })
       .then(text => {
         const latestYear = getLastYearFromCsv(text) ?? '2047';
+        const parsed = parsePopulationCsvByYear(text);
+        setPopulationYears(parsed.years);
         setPopulationYear(latestYear);
-        const map = parsePopulationCsv(text, latestYear);
+        setPopulationByYear(parsed.byYear);
+        const map = parsed.byYear.get(latestYear) ?? new Map();
         setPopulationByCode(map);
         setPopulationLoading(false);
         console.log(`[Map] Loaded population CSV, latest year ${latestYear}, areas ${map.size}`);
@@ -98,6 +110,25 @@ export function Map() {
     return createPopulationColorScale(densities);
   }, [layerFeatures]);
 
+  // Animation effect for year slider
+  useEffect(() => {
+    if (!isPlaying || populationYears.length === 0 || !populationYear) return;
+    const idx = populationYears.indexOf(populationYear);
+    const nextIdx = (idx + 1) % populationYears.length;
+    const handle = setTimeout(() => {
+      const nextYear = populationYears[nextIdx];
+      setPopulationYear(nextYear);
+    }, animationSpeed);
+    return () => clearTimeout(handle);
+  }, [isPlaying, populationYear, populationYears, animationSpeed]);
+
+  // Update population map when year changes
+  useEffect(() => {
+    if (!populationYear || !populationByYear) return;
+    const map = populationByYear.get(populationYear) ?? new Map();
+    setPopulationByCode(map);
+  }, [populationYear, populationByYear]);
+
   const summary = useMemo(() => {
     if (!layerFeatures) return null;
     const withData = layerFeatures.filter((f) => f.properties?.hasPopulationData);
@@ -115,6 +146,9 @@ export function Map() {
     const median = densities.length % 2 === 0 ? (densities[mid - 1] + densities[mid]) / 2 : densities[mid];
     return { withData: withData.length, withoutData, min, median, max };
   }, [layerFeatures]);
+
+  const minYear = useMemo(() => (populationYears.length ? Number(populationYears[0]) : null), [populationYears]);
+  const maxYear = useMemo(() => (populationYears.length ? Number(populationYears[populationYears.length - 1]) : null), [populationYears]);
 
   // Create deck.gl layers
   const getLayers = useCallback(() => {
@@ -344,6 +378,50 @@ export function Map() {
           </span>
         )}
       </div>
+
+      {populationYears.length > 0 && populationYear && (
+        <div className={styles.yearSliderContainer}>
+          <div className={styles.yearSliderHeader}>
+            <div className={styles.yearSliderLabel}>
+              Year <strong>{populationYear}</strong>
+            </div>
+            <div className={styles.yearSliderPop}>Population density choropleth</div>
+          </div>
+          <div className={styles.yearSliderRow}>
+            <button
+              className={styles.playButton}
+              onClick={() => setIsPlaying((p) => !p)}
+              aria-label={isPlaying ? 'Pause animation' : 'Play animation'}
+            >
+              {isPlaying ? '❚❚' : '►'}
+            </button>
+            <span className={styles.yearSliderMin}>{minYear ?? ''}</span>
+            <input
+              type="range"
+              min={minYear ?? 0}
+              max={maxYear ?? 0}
+              step={1}
+              value={Number(populationYear)}
+              onChange={(e) => setPopulationYear(String(e.target.value))}
+              className={styles.yearSlider}
+            />
+            <span className={styles.yearSliderMax}>{maxYear ?? ''}</span>
+            <div className={styles.speedControl}>
+              <span className={styles.speedLabel}>Speed:</span>
+              <input
+                type="range"
+                min={50}
+                max={1000}
+                step={50}
+                value={1050 - animationSpeed}
+                onChange={(e) => setAnimationSpeed(1050 - parseInt(e.target.value))}
+                className={styles.speedSlider}
+                title={`${animationSpeed}ms per year`}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className={styles.infoBar} style={{ marginTop: 'var(--space-2)' }}>
         <label className={styles.coord}>

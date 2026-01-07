@@ -36,6 +36,43 @@ export function parsePopulationCsv(csvText: string, year: string): Map<string, n
 }
 
 /**
+ * Parse CSV for all available years, returning a map per year and the ordered year list.
+ */
+export function parsePopulationCsvByYear(csvText: string): { years: string[]; byYear: Map<string, Map<string, number>> } {
+  const lines = csvText.split(/\r?\n/).filter(Boolean);
+  if (lines.length === 0) return { years: [], byYear: new Map() };
+
+  const header = lines[0].replace(/"/g, '').split(',');
+  const yearColumns = header
+    .map((col, idx) => ({ col, idx }))
+    .filter(({ col }) => /^\d{4}$/.test(col));
+
+  const byYear = new Map<string, Map<string, number>>();
+  const codeIdx = 0;
+  const componentIdx = 2;
+  const sexIdx = 3;
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',');
+    if (cols[componentIdx] !== 'Population' || cols[sexIdx] !== 'persons') continue;
+    const code = cols[codeIdx];
+    for (const { col, idx } of yearColumns) {
+      const val = Number(cols[idx]);
+      if (!Number.isFinite(val)) continue;
+      let yearMap = byYear.get(col);
+      if (!yearMap) {
+        yearMap = new Map();
+        byYear.set(col, yearMap);
+      }
+      yearMap.set(code, (yearMap.get(code) ?? 0) + val);
+    }
+  }
+
+  const years = yearColumns.map(({ col }) => col);
+  return { years, byYear };
+}
+
+/**
  * Attach population data to region features. If no data is present, population = null and hasPopulationData = false.
  */
 export function augmentFeaturesWithPopulation(
