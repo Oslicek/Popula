@@ -214,3 +214,62 @@ export type NewScenario = Omit<Scenario, 'id' | 'createdAt' | 'updatedAt'>;
 
 /** Create a new shock (without id) */
 export type NewShock = Omit<Shock, 'id'>;
+
+// ============================================================
+// HELPER FUNCTIONS
+// ============================================================
+
+/** Create an age group for a single year */
+export function singleYearAge(age: number): AgeGroup {
+  return { min: age, max: age };
+}
+
+/** Create an age group for a range */
+export function ageRange(min: number, max: number): AgeGroup {
+  if (min > max) {
+    throw new Error('Invalid age range: min cannot be greater than max');
+  }
+  return { min, max };
+}
+
+/** Check if an age falls within an age group */
+export function isAgeInGroup(age: number, group: AgeGroup | 'all'): boolean {
+  if (group === 'all') {
+    return true;
+  }
+  return age >= group.min && age <= group.max;
+}
+
+/** Calculate total population from cohorts */
+export function totalPopulation(cohorts: readonly Cohort[]): number {
+  return cohorts.reduce((sum, cohort) => sum + cohort.count, 0);
+}
+
+/** Calculate median age from cohorts */
+export function medianAge(cohorts: readonly Cohort[]): number {
+  if (cohorts.length === 0) {
+    return 0;
+  }
+
+  const total = totalPopulation(cohorts);
+  if (total === 0) {
+    return 0;
+  }
+
+  // Sort cohorts by age
+  const sorted = [...cohorts].sort((a, b) => a.age - b.age);
+  
+  // Find median age (the age where cumulative count reaches half)
+  const half = total / 2;
+  let cumulative = 0;
+  
+  for (const cohort of sorted) {
+    cumulative += cohort.count;
+    if (cumulative >= half) {
+      return cohort.age;
+    }
+  }
+  
+  const lastCohort = sorted[sorted.length - 1];
+  return lastCohort?.age ?? 0;
+}

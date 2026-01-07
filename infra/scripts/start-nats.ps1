@@ -15,7 +15,7 @@ if ($NatsPath -eq "") {
         "$env:USERPROFILE\.nats\nats-server.exe",
         "$env:LOCALAPPDATA\nats\nats-server.exe",
         "C:\Tools\nats\nats-server.exe",
-        "nats-server.exe"  # In PATH
+        "nats-server.exe"
     )
     
     foreach ($path in $possiblePaths) {
@@ -90,9 +90,9 @@ if (!(Test-Path $dataDir)) {
 }
 
 Write-Host ""
-Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║                    POPULA - NATS Server                      ║" -ForegroundColor Cyan
-Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "======================================" -ForegroundColor Cyan
+Write-Host "       POPULA - NATS Server          " -ForegroundColor Cyan
+Write-Host "======================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  NATS Path:    $NatsPath" -ForegroundColor Gray
 Write-Host "  Config:       $configPath" -ForegroundColor Gray

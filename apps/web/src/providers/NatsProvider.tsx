@@ -4,7 +4,7 @@ import { connect, type NatsConnection, type Subscription, StringCodec } from 'na
 // NATS WebSocket URL (configurable via environment)
 const NATS_WS_URL = import.meta.env.VITE_NATS_WS_URL || 'ws://localhost:8222';
 
-interface NatsContextValue {
+export interface NatsContextValue {
   isConnected: boolean;
   error: string | null;
   publish: (subject: string, data: unknown) => Promise<void>;

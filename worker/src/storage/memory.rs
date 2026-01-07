@@ -223,18 +223,16 @@ impl Storage for MemoryStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::ScenarioStatus;
 
     fn create_test_scenario(id: &str) -> Scenario {
         Scenario {
             id: id.to_string(),
             name: "Test Scenario".to_string(),
-            description: None,
+            description: "Test description".to_string(),
             base_year: 2024,
             end_year: 2050,
             regions: vec!["CZ".to_string()],
             shocks: vec![],
-            status: ScenarioStatus::Draft,
             created_at: "2024-01-01T00:00:00Z".to_string(),
             updated_at: "2024-01-01T00:00:00Z".to_string(),
         }

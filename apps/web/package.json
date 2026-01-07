@@ -15,6 +15,7 @@
   "dependencies": {
     "@popula/shared-types": "workspace:*",
     "d3": "^7.9.0",
+    "nats.ws": "^1.30.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.1",

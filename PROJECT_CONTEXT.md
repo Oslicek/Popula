@@ -1,6 +1,6 @@
 # Project Context
 
-> **Last Updated:** 2026-01-06 (v0.1.0)
+> **Last Updated:** 2026-01-07 (v0.1.0)
 
 ## Overview
 
@@ -133,37 +133,45 @@ Popula/
 │   └── web/                        # React frontend
 │       ├── src/
 │       │   ├── components/
-│       │   │   ├── PopulationPyramid/
-│       │   │   ├── ScenarioBuilder/
-│       │   │   └── ProjectionTimeline/
+│       │   │   ├── ConnectionStatus/
+│       │   │   ├── Header/
+│       │   │   ├── Footer/
+│       │   │   └── Layout/
 │       │   ├── hooks/
-│       │   │   ├── useNats.ts      # NATS connection
+│       │   │   ├── useNats.ts      # NATS connection hook
 │       │   │   └── useProjection.ts # Projection subscription
+│       │   ├── services/
+│       │   │   └── nats.ts         # NATS WebSocket service
 │       │   ├── stores/
+│       │   │   ├── natsStore.ts    # Connection state
 │       │   │   └── scenarioStore.ts
 │       │   └── pages/
-│       │       ├── Home/
+│       │       ├── Home/           # Main page with ping demo
 │       │       └── Scenario/
 │       ├── package.json
 │       └── vite.config.ts
 │
 ├── packages/
-│   ├── shared-types/               # Shared TypeScript types
-│   │   └── src/
-│   │       ├── demographic.ts
-│   │       ├── messages.ts
-│   │       └── storage.ts
-│   └── storage/                    # TS storage adapters
+│   └── shared-types/               # Shared TypeScript types
+│       └── src/
+│           ├── demographic.ts      # Cohort, Population, etc.
+│           ├── messages.ts         # NATS message envelopes
+│           ├── scenario.ts
+│           ├── shock.ts            # Shock types & helpers
+│           └── storage.ts
 │
 ├── worker/                         # Rust worker
 │   ├── src/
 │   │   ├── main.rs
 │   │   ├── engine/
 │   │   │   ├── mod.rs
-│   │   │   ├── types.rs
-│   │   │   ├── population.rs
-│   │   │   └── projection.rs       # CCM implementation
+│   │   │   ├── types.rs            # Rust demographic types
+│   │   │   ├── ccm.rs              # CCM implementation ✅
+│   │   │   ├── ccm_tests.rs        # CCM unit tests ✅
+│   │   │   └── projection.rs
 │   │   ├── handlers/
+│   │   │   ├── mod.rs
+│   │   │   ├── ping.rs             # Ping/pong demo handler ✅
 │   │   │   └── scenario.rs
 │   │   └── storage/
 │   │       ├── mod.rs
@@ -174,14 +182,12 @@ Popula/
 ├── infra/
 │   ├── nats-server.conf
 │   └── scripts/
-│       ├── start-nats.ps1
+│       ├── start-nats.ps1          # Auto-installs NATS
 │       └── dev.ps1
 │
 ├── data/
 │   └── sample/
-│       ├── cz-population-2024.json
-│       ├── cz-mortality-2024.json
-│       └── cz-fertility-2024.json
+│       └── cz-population-2024.json
 │
 ├── package.json
 ├── pnpm-workspace.yaml
@@ -193,12 +199,10 @@ Popula/
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
-| `PopulationPyramid` | apps/web/src/components/ | Animated age-gender pyramid |
-| `ScenarioBuilder` | apps/web/src/components/ | Create/edit scenarios with shocks |
-| `ProjectionTimeline` | apps/web/src/components/ | Scrub through projection years |
-| `useNats` | apps/web/src/hooks/ | NATS WebSocket connection |
-| `useProjection` | apps/web/src/hooks/ | Subscribe to projection results |
-| `DemographicEngine` | worker/src/engine/ | CCM implementation |
+| `NatsService` | apps/web/src/services/ | NATS WebSocket client |
+| `useNatsStore` | apps/web/src/stores/ | Connection state (Zustand) |
+| `PingHandler` | worker/src/handlers/ | Demo request/reply handler |
+| `CohortComponentModel` | worker/src/engine/ccm.rs | CCM implementation |
 | `ScenarioHandler` | worker/src/handlers/ | Process scenario messages |
 | `Storage` | worker/src/storage/ | DB-agnostic persistence |
 
@@ -213,26 +217,39 @@ Popula/
 
 ## Current State
 
-**Phase:** MVP Scaffolding
+**Phase:** Core Engine Implementation
 
 **Completed:**
 - [x] Project architecture design
 - [x] Type definitions (TypeScript + Rust)
 - [x] Storage abstraction layer design
 - [x] Message schema design
-- [x] Project documentation (PROJECT_RULES.md, PROJECT_CONTEXT.md)
+- [x] Project documentation
+- [x] Monorepo scaffolding (pnpm workspaces)
+- [x] NATS local infrastructure setup (auto-install script)
+- [x] Rust worker skeleton
+- [x] NATS WebSocket connection (frontend ↔ worker)
+- [x] Ping/pong demo (full round-trip working)
+- [x] **CCM engine implementation** (TDD)
+  - Aging (cohort progression)
+  - Mortality (survival rates)
+  - Fertility (births with sex ratio)
+  - Multi-year projections
+
+**Test Coverage:**
+- TypeScript: 41 tests passing (shared-types + web)
+- Rust: 30 tests passing (CCM + handlers + storage)
+- Total: **71 tests**
 
 **In Progress:**
-- [ ] Monorepo scaffolding (pnpm workspaces)
-- [ ] NATS local infrastructure setup
-- [ ] Rust worker skeleton
+- [ ] Migration component for CCM
+- [ ] Shock modifier integration with CCM
 
 **Pending:**
-- [ ] CCM engine implementation
-- [ ] React frontend
-- [ ] Population pyramid visualization
-- [ ] Scenario builder UI
-- [ ] Sample data (Czech Republic)
+- [ ] Wire CCM engine to NATS scenario handler
+- [ ] React frontend scenario builder UI
+- [ ] Population pyramid visualization (D3.js)
+- [ ] Sample data loading (Czech Republic)
 
 ## Development Setup (Windows 11)
 
@@ -247,23 +264,33 @@ npm install -g pnpm
 # Install Rust
 winget install Rustlang.Rustup
 
-# Download NATS server
-# https://github.com/nats-io/nats-server/releases
-# Extract to C:\Tools\nats\ or add to PATH
+# Install Visual Studio Build Tools (for Rust MSVC)
+winget install Microsoft.VisualStudio.2022.BuildTools --override "--passive --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64"
 ```
 
 ### Running Locally
 ```powershell
-# Terminal 1: Start NATS
-.\infra\scripts\start-nats.ps1
+# Terminal 1: Start NATS (auto-installs if needed)
+pnpm nats:start
+# Or: .\infra\scripts\start-nats.ps1 -Install
 
 # Terminal 2: Start Rust worker
 cd worker
 cargo run
 
 # Terminal 3: Start frontend
-cd apps/web
 pnpm dev
+```
+
+### Running Tests
+```powershell
+# All tests (TypeScript + Rust)
+pnpm test                    # TypeScript tests
+cd worker && cargo test      # Rust tests
+
+# Watch mode
+pnpm test:watch             # TypeScript
+cargo watch -x test         # Rust (requires cargo-watch)
 ```
 
 ## Testing Strategy
@@ -280,23 +307,44 @@ pnpm dev
 - Rust engine: 95%+ for calculations
 - Integration: Message round-trip tests
 
+## CCM Algorithm (Implemented)
+
+The Cohort-Component Method projects population year-by-year:
+
+```
+For each year t → t+1:
+1. FERTILITY: Calculate births from women age 15-49
+   births = Σ(women[age] × fertility_rate[age])
+   
+2. MORTALITY: Apply survival rates
+   survivors[age] = population[age] × (1 - mortality_rate[age])
+   
+3. AGING: Move survivors up one year
+   population[age+1, t+1] = survivors[age, t]
+   
+4. NEWBORNS: Add births at age 0
+   population[0, t+1] = births × sex_ratio_split
+
+5. MIGRATION: Add/subtract net migrants (TODO)
+```
+
 ## Notes
 
 - Local development on Windows 11
-- NATS runs as a single binary (no Docker required)
+- NATS runs as a single binary (auto-installed to ~/.nats/)
 - Storage defaults to in-memory for MVP
 - Same code paths for local and production
 - CCM (Cohort-Component Method) is the core algorithm
+- Max age is 120 (open-ended interval)
 
 ## Next Steps
 
-1. Initialize monorepo structure
-2. Install NATS and verify connectivity
-3. Create shared-types package with demographic types
-4. Scaffold Rust worker with async-nats
-5. Implement minimal CCM engine (mortality + aging)
-6. Create React app with NATS hook
-7. Build population pyramid visualization
+1. ~~Implement minimal CCM engine (mortality + aging + fertility)~~ ✅
+2. Add migration component to CCM
+3. Wire CCM to NATS scenario handler
+4. Create React scenario builder UI
+5. Build population pyramid visualization (D3.js)
+6. Load sample Czech Republic data
 
 ---
 

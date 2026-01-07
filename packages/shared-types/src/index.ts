@@ -26,6 +26,37 @@ export type {
   NewShock,
 } from './demographic';
 
+export {
+  singleYearAge,
+  ageRange,
+  isAgeInGroup,
+  totalPopulation,
+  medianAge,
+} from './demographic';
+
+// Shock types and helpers
+export type {
+  AgeRange,
+  ShockTemplate,
+  Modifier,
+  MultiplierModifier,
+  AbsoluteModifier,
+  FunctionModifier,
+} from './shock';
+
+export {
+  SHOCK_TEMPLATES,
+  createShockFromTemplate,
+  multiplier,
+  absolute,
+  additive,
+  applyModifier,
+  shockApplies,
+  pandemicShock,
+  warShock,
+  migrationCrisisShock,
+} from './shock';
+
 // Message types
 export type {
   MessageEnvelope,

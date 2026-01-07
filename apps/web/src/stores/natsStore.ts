@@ -1,50 +1,80 @@
 import { create } from 'zustand';
-
-export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+import { natsService, type ConnectionStatus, type PingResponse } from '@/services/nats';
 
 interface NatsState {
   status: ConnectionStatus;
   error: string | null;
+  lastPingResponse: PingResponse | null;
+  isPinging: boolean;
   
   // Actions
   setStatus: (status: ConnectionStatus) => void;
   setError: (error: string | null) => void;
   connect: () => Promise<void>;
   disconnect: () => void;
+  ping: (message: string) => Promise<PingResponse>;
 }
 
-export const useNatsStore = create<NatsState>((set, get) => ({
-  status: 'disconnected',
-  error: null,
-  
-  setStatus: (status) => set({ status }),
-  setError: (error) => set({ error, status: error ? 'error' : get().status }),
-  
-  connect: async () => {
-    const { status } = get();
-    if (status === 'connected' || status === 'connecting') {
-      return;
-    }
+// NATS WebSocket URL (port 8080 is configured in nats-server.conf)
+const NATS_WS_URL = 'ws://localhost:8080';
+
+export const useNatsStore = create<NatsState>((set, get) => {
+  // Subscribe to status changes from the service
+  natsService.onStatusChange((status) => {
+    set({ status });
+  });
+
+  return {
+    status: 'disconnected',
+    error: null,
+    lastPingResponse: null,
+    isPinging: false,
     
-    set({ status: 'connecting', error: null });
+    setStatus: (status) => set({ status }),
+    setError: (error) => set({ error, status: error ? 'error' : get().status }),
     
-    try {
-      // TODO: Implement actual NATS WebSocket connection
-      // For now, simulate a connection attempt
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    connect: async () => {
+      const { status } = get();
+      if (status === 'connected' || status === 'connecting') {
+        return;
+      }
       
-      // Simulate connection success for demo
-      set({ status: 'connected', error: null });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Connection failed';
-      set({ status: 'error', error: message });
-    }
-  },
-  
-  disconnect: () => {
-    // TODO: Implement actual disconnect
-    set({ status: 'disconnected', error: null });
-  },
-}));
+      set({ error: null });
+      
+      try {
+        await natsService.connect(NATS_WS_URL);
+        set({ status: 'connected', error: null });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Connection failed';
+        set({ status: 'error', error: message });
+      }
+    },
+    
+    disconnect: () => {
+      natsService.disconnect();
+      set({ status: 'disconnected', error: null });
+    },
 
+    ping: async (message: string) => {
+      const { status } = get();
+      if (status !== 'connected') {
+        throw new Error('Not connected to NATS');
+      }
 
+      set({ isPinging: true, error: null });
+
+      try {
+        const response = await natsService.ping(message);
+        set({ lastPingResponse: response, isPinging: false });
+        return response;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Ping failed';
+        set({ error: errorMessage, isPinging: false });
+        throw err;
+      }
+    },
+  };
+});
+
+// Re-export types for convenience
+export type { ConnectionStatus, PingResponse };

@@ -21,6 +21,26 @@ export interface AgeRange {
 }
 
 /**
+ * Modifier types for rate adjustments.
+ */
+export interface MultiplierModifier {
+  type: 'multiplier';
+  value: number;
+}
+
+export interface AbsoluteModifier {
+  type: 'absolute';
+  value: number;
+}
+
+export interface FunctionModifier {
+  type: 'function';
+  expression: string;
+}
+
+export type Modifier = MultiplierModifier | AbsoluteModifier | FunctionModifier;
+
+/**
  * Shock modifier definition.
  * Applies a multiplier to demographic rates during a specified period.
  */
@@ -43,12 +63,8 @@ export interface Shock {
   targetGenders: 'all' | Gender[];
   /** Target age range ('all' or specific range) */
   targetAges: 'all' | AgeRange;
-  /** 
-   * Rate modifier.
-   * - For mortality/fertility: multiplier (1.0 = no change, 1.5 = 50% increase)
-   * - For migration: additive count change
-   */
-  modifier: number;
+  /** Rate modifier */
+  modifier: Modifier | number;
   /**
    * Optional intensity curve over time.
    * If provided, modifier is scaled by this curve.
@@ -178,6 +194,177 @@ export const SHOCK_TEMPLATES: ShockTemplate[] = [
     },
   },
 ];
+
+// ============================================================
+// MODIFIER HELPERS
+// ============================================================
+
+/**
+ * Create a multiplier modifier.
+ */
+export function multiplier(value: number): MultiplierModifier {
+  return { type: 'multiplier', value };
+}
+
+/**
+ * Create an absolute modifier.
+ */
+export function absolute(value: number): AbsoluteModifier {
+  return { type: 'absolute', value };
+}
+
+/**
+ * Create an additive modifier for migration shocks (alias for absolute).
+ */
+export function additive(value: number): AbsoluteModifier {
+  return absolute(value);
+}
+
+/**
+ * Apply a modifier to a base value.
+ */
+export function applyModifier(baseValue: number, modifier: Modifier): number {
+  switch (modifier.type) {
+    case 'multiplier':
+      return baseValue * modifier.value;
+    case 'absolute':
+      return baseValue + modifier.value;
+    case 'function':
+      throw new Error('Function modifiers must be evaluated on the backend');
+  }
+}
+
+// ============================================================
+// SHOCK APPLICABILITY
+// ============================================================
+
+/**
+ * Check if a shock applies to a specific cohort at a given time.
+ */
+export function shockApplies(
+  shock: Shock,
+  year: number,
+  age: number,
+  gender: Gender,
+  regionId: string
+): boolean {
+  // Check year range
+  if (year < shock.startYear || year > shock.endYear) {
+    return false;
+  }
+
+  // Check region
+  if (shock.targetRegions !== 'all' && !shock.targetRegions.includes(regionId)) {
+    return false;
+  }
+
+  // Check gender
+  if (shock.targetGenders !== 'all' && !shock.targetGenders.includes(gender)) {
+    return false;
+  }
+
+  // Check age
+  if (shock.targetAges !== 'all') {
+    if (age < shock.targetAges.min || age > shock.targetAges.max) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// ============================================================
+// SHOCK FACTORY FUNCTIONS
+// ============================================================
+
+interface PandemicShockParams {
+  id: string;
+  name: string;
+  startYear: number;
+  endYear: number;
+  mortalityIncrease: number;
+  minAge?: number;
+  description?: string;
+}
+
+/**
+ * Create a pandemic shock.
+ */
+export function pandemicShock(params: PandemicShockParams): Shock {
+  return {
+    id: params.id,
+    name: params.name,
+    description: params.description ?? `Pandemic affecting population aged ${params.minAge ?? 0}+`,
+    type: 'mortality',
+    startYear: params.startYear,
+    endYear: params.endYear,
+    targetRegions: 'all',
+    targetGenders: 'all',
+    targetAges: { min: params.minAge ?? 0, max: 120 },
+    modifier: multiplier(params.mortalityIncrease),
+  };
+}
+
+interface WarShockParams {
+  id: string;
+  name: string;
+  startYear: number;
+  endYear: number;
+  mortalityIncrease: number;
+  description?: string;
+}
+
+/**
+ * Create a war shock (targeting young males).
+ */
+export function warShock(params: WarShockParams): Shock {
+  return {
+    id: params.id,
+    name: params.name,
+    description: params.description ?? 'War casualties primarily affecting young adult males',
+    type: 'mortality',
+    startYear: params.startYear,
+    endYear: params.endYear,
+    targetRegions: 'all',
+    targetGenders: ['male'],
+    targetAges: { min: 18, max: 45 },
+    modifier: multiplier(params.mortalityIncrease),
+  };
+}
+
+interface MigrationCrisisShockParams {
+  id: string;
+  name: string;
+  startYear: number;
+  endYear: number;
+  netMigration: number;
+  description?: string;
+}
+
+/**
+ * Create a migration crisis shock.
+ */
+export function migrationCrisisShock(params: MigrationCrisisShockParams): Shock {
+  const direction = params.netMigration >= 0 ? 'immigration' : 'emigration';
+  const count = Math.abs(params.netMigration).toLocaleString();
+  
+  return {
+    id: params.id,
+    name: params.name,
+    description: params.description ?? `Net ${direction} of ${count} people per year`,
+    type: 'migration',
+    startYear: params.startYear,
+    endYear: params.endYear,
+    targetRegions: 'all',
+    targetGenders: 'all',
+    targetAges: 'all',
+    modifier: absolute(params.netMigration),
+  };
+}
+
+// ============================================================
+// TEMPLATE HELPERS
+// ============================================================
 
 /**
  * Helper to create a shock from a template.
