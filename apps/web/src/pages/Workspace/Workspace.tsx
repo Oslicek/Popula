@@ -21,6 +21,17 @@ import {
   calculateMedianAgeProgression,
   calculateLifeTable,
 } from '@/utils/demographicCalculations';
+import {
+  downloadCSV,
+  exportYearlyChangeCSV,
+  exportPopulationPyramidCSV,
+  exportAgeGroupsCSV,
+  exportDependencyRatiosCSV,
+  exportSexRatiosCSV,
+  exportCohortTrackingCSV,
+  exportMedianAgeCSV,
+  exportLifeTableCSV,
+} from '@/utils/csvExport';
 import styles from './Workspace.module.css';
 
 // Lazy load chart components to avoid issues with Vega initialization
@@ -675,37 +686,54 @@ export function Workspace() {
           
           {/* Year-over-Year Change View */}
           {resultView === 'yearly-change' && chartType === 'table' && (
-            <div className={styles.resultsTable}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Year</th>
-                    <th>Population</th>
-                    <th>Births</th>
-                    <th>Deaths</th>
-                    <th>Migration</th>
-                    <th>Natural Change</th>
-                    <th>Growth Rate</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {workspace.projection.results.map((row) => (
-                    <tr key={row.year}>
-                      <td>{row.year}</td>
-                      <td>{row.totalPopulation.toLocaleString()}</td>
-                      <td>{row.births.toLocaleString()}</td>
-                      <td>{row.deaths.toLocaleString()}</td>
-                      <td>{row.netMigration.toLocaleString()}</td>
-                      <td className={row.naturalChange >= 0 ? styles.positive : styles.negative}>
-                        {row.naturalChange >= 0 ? '+' : ''}{row.naturalChange.toLocaleString()}
-                      </td>
-                      <td className={row.growthRate >= 0 ? styles.positive : styles.negative}>
-                        {row.growthRate >= 0 ? '+' : ''}{row.growthRate.toFixed(2)}%
-                      </td>
+            <div className={styles.tableWithExport}>
+              <button
+                className={styles.exportButton}
+                onClick={() => {
+                  const data = workspace.projection.results.map(r => ({
+                    year: r.year,
+                    population: r.totalPopulation,
+                    births: r.births,
+                    deaths: r.deaths,
+                    migration: r.netMigration,
+                  }));
+                  downloadCSV(exportYearlyChangeCSV(data), `yearly-change-${workspace.name}.csv`);
+                }}
+              >
+                📥 Export CSV
+              </button>
+              <div className={styles.resultsTable}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Year</th>
+                      <th>Population</th>
+                      <th>Births</th>
+                      <th>Deaths</th>
+                      <th>Migration</th>
+                      <th>Natural Change</th>
+                      <th>Growth Rate</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {workspace.projection.results.map((row) => (
+                      <tr key={row.year}>
+                        <td>{row.year}</td>
+                        <td>{row.totalPopulation.toLocaleString()}</td>
+                        <td>{row.births.toLocaleString()}</td>
+                        <td>{row.deaths.toLocaleString()}</td>
+                        <td>{row.netMigration.toLocaleString()}</td>
+                        <td className={row.naturalChange >= 0 ? styles.positive : styles.negative}>
+                          {row.naturalChange >= 0 ? '+' : ''}{row.naturalChange.toLocaleString()}
+                        </td>
+                        <td className={row.growthRate >= 0 ? styles.positive : styles.negative}>
+                          {row.growthRate >= 0 ? '+' : ''}{row.growthRate.toFixed(2)}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
           
@@ -827,38 +855,51 @@ export function Workspace() {
                     
                     {/* Pyramid Table */}
                     {chartType === 'table' && (
-                      <div className={styles.resultsTable}>
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Age</th>
-                              <th>Male</th>
-                              <th>Female</th>
-                              <th>Total</th>
-                              <th>% of Pop</th>
-                              <th>Sex Ratio</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {yearData.cohorts.map((cohort) => {
-                              const total = cohort.male + cohort.female;
-                              const pctOfPop = (total / yearData.total * 100);
-                              const sexRatio = cohort.female > 0 
-                                ? (cohort.male / cohort.female * 100).toFixed(1) 
-                                : '—';
-                              return (
-                                <tr key={cohort.age}>
-                                  <td>{cohort.age}</td>
-                                  <td>{cohort.male.toLocaleString()}</td>
-                                  <td>{cohort.female.toLocaleString()}</td>
-                                  <td>{total.toLocaleString()}</td>
-                                  <td>{pctOfPop.toFixed(2)}%</td>
-                                  <td>{sexRatio}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                      <div className={styles.tableWithExport}>
+                        <button
+                          className={styles.exportButton}
+                          onClick={() => {
+                            downloadCSV(
+                              exportPopulationPyramidCSV({ year: yearData.year, cohorts: yearData.cohorts }),
+                              `population-pyramid-${workspace.name}-${yearData.year}.csv`
+                            );
+                          }}
+                        >
+                          📥 Export CSV
+                        </button>
+                        <div className={styles.resultsTable}>
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Age</th>
+                                <th>Male</th>
+                                <th>Female</th>
+                                <th>Total</th>
+                                <th>% of Pop</th>
+                                <th>Sex Ratio</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {yearData.cohorts.map((cohort) => {
+                                const total = cohort.male + cohort.female;
+                                const pctOfPop = (total / yearData.total * 100);
+                                const sexRatio = cohort.female > 0 
+                                  ? (cohort.male / cohort.female * 100).toFixed(1) 
+                                  : '—';
+                                return (
+                                  <tr key={cohort.age}>
+                                    <td>{cohort.age}</td>
+                                    <td>{cohort.male.toLocaleString()}</td>
+                                    <td>{cohort.female.toLocaleString()}</td>
+                                    <td>{total.toLocaleString()}</td>
+                                    <td>{pctOfPop.toFixed(2)}%</td>
+                                    <td>{sexRatio}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
                   </>
@@ -973,31 +1014,41 @@ export function Workspace() {
                     )}
                     
                     {chartType === 'table' && (
-                      <div className={styles.tableWrapper}>
-                        <table className={styles.resultsTable}>
-                          <thead>
-                            <tr>
-                              <th>Age Group</th>
-                              <th>Male</th>
-                              <th>Female</th>
-                              <th>Total</th>
-                              <th>% of Population</th>
-                              <th>Sex Ratio (M/F×100)</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {ageGroups.map(g => (
-                              <tr key={g.group}>
-                                <td>{g.label}</td>
-                                <td>{g.male.toLocaleString()}</td>
-                                <td>{g.female.toLocaleString()}</td>
-                                <td>{g.total.toLocaleString()}</td>
-                                <td>{g.percentage.toFixed(2)}%</td>
-                                <td>{g.female > 0 ? (g.male / g.female * 100).toFixed(1) : '—'}</td>
+                      <div className={styles.tableWithExport}>
+                        <button
+                          className={styles.exportButton}
+                          onClick={() => {
+                            downloadCSV(exportAgeGroupsCSV(ageGroups, currentYear), `age-groups-${workspace.name}-${currentYear}.csv`);
+                          }}
+                        >
+                          📥 Export CSV
+                        </button>
+                        <div className={styles.tableWrapper}>
+                          <table className={styles.resultsTable}>
+                            <thead>
+                              <tr>
+                                <th>Age Group</th>
+                                <th>Male</th>
+                                <th>Female</th>
+                                <th>Total</th>
+                                <th>% of Population</th>
+                                <th>Sex Ratio (M/F×100)</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {ageGroups.map(g => (
+                                <tr key={g.group}>
+                                  <td>{g.label}</td>
+                                  <td>{g.male.toLocaleString()}</td>
+                                  <td>{g.female.toLocaleString()}</td>
+                                  <td>{g.total.toLocaleString()}</td>
+                                  <td>{g.percentage.toFixed(2)}%</td>
+                                  <td>{g.female > 0 ? (g.male / g.female * 100).toFixed(1) : '—'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
                   </>
@@ -1075,33 +1126,43 @@ export function Workspace() {
                         </ErrorBoundary>
                       </div>
                     ) : (
-                      <div className={styles.tableWrapper}>
-                        <table className={styles.resultsTable}>
-                          <thead>
-                            <tr>
-                              <th>Year</th>
-                              <th>Youth (0-14)</th>
-                              <th>Working Age (15-64)</th>
-                              <th>Elderly (65+)</th>
-                              <th>Youth Ratio</th>
-                              <th>Old-Age Ratio</th>
-                              <th>Total Ratio</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {dependencyData.map(d => (
-                              <tr key={d.year}>
-                                <td>{d.year}</td>
-                                <td>{d.youthPop.toLocaleString()}</td>
-                                <td>{d.workingAgePop.toLocaleString()}</td>
-                                <td>{d.elderlyPop.toLocaleString()}</td>
-                                <td>{d.youthRatio.toFixed(1)}%</td>
-                                <td>{d.oldAgeRatio.toFixed(1)}%</td>
-                                <td><strong>{d.totalRatio.toFixed(1)}%</strong></td>
+                      <div className={styles.tableWithExport}>
+                        <button
+                          className={styles.exportButton}
+                          onClick={() => {
+                            downloadCSV(exportDependencyRatiosCSV(dependencyData), `dependency-ratios-${workspace.name}.csv`);
+                          }}
+                        >
+                          📥 Export CSV
+                        </button>
+                        <div className={styles.tableWrapper}>
+                          <table className={styles.resultsTable}>
+                            <thead>
+                              <tr>
+                                <th>Year</th>
+                                <th>Youth (0-14)</th>
+                                <th>Working Age (15-64)</th>
+                                <th>Elderly (65+)</th>
+                                <th>Youth Ratio</th>
+                                <th>Old-Age Ratio</th>
+                                <th>Total Ratio</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {dependencyData.map(d => (
+                                <tr key={d.year}>
+                                  <td>{d.year}</td>
+                                  <td>{d.youthPop.toLocaleString()}</td>
+                                  <td>{d.workingAgePop.toLocaleString()}</td>
+                                  <td>{d.elderlyPop.toLocaleString()}</td>
+                                  <td>{d.youthRatio.toFixed(1)}%</td>
+                                  <td>{d.oldAgeRatio.toFixed(1)}%</td>
+                                  <td><strong>{d.totalRatio.toFixed(1)}%</strong></td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
                   </>
@@ -1157,35 +1218,45 @@ export function Workspace() {
                         </ErrorBoundary>
                       </div>
                     ) : (
-                      <div className={styles.tableWrapper}>
-                        <table className={styles.resultsTable}>
-                          <thead>
-                            <tr>
-                              <th>Year</th>
-                              <th>Overall</th>
-                              <th>At Birth</th>
-                              <th>Children</th>
-                              <th>Working Age</th>
-                              <th>Elderly</th>
-                              <th>Total Male</th>
-                              <th>Total Female</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {sexRatioData.map(d => (
-                              <tr key={d.year}>
-                                <td>{d.year}</td>
-                                <td><strong>{d.overallRatio.toFixed(1)}</strong></td>
-                                <td>{d.atBirthRatio.toFixed(1)}</td>
-                                <td>{d.childrenRatio.toFixed(1)}</td>
-                                <td>{d.workingAgeRatio.toFixed(1)}</td>
-                                <td>{d.elderlyRatio.toFixed(1)}</td>
-                                <td>{d.totalMale.toLocaleString()}</td>
-                                <td>{d.totalFemale.toLocaleString()}</td>
+                      <div className={styles.tableWithExport}>
+                        <button
+                          className={styles.exportButton}
+                          onClick={() => {
+                            downloadCSV(exportSexRatiosCSV(sexRatioData), `sex-ratios-${workspace.name}.csv`);
+                          }}
+                        >
+                          📥 Export CSV
+                        </button>
+                        <div className={styles.tableWrapper}>
+                          <table className={styles.resultsTable}>
+                            <thead>
+                              <tr>
+                                <th>Year</th>
+                                <th>Overall</th>
+                                <th>At Birth</th>
+                                <th>Children</th>
+                                <th>Working Age</th>
+                                <th>Elderly</th>
+                                <th>Total Male</th>
+                                <th>Total Female</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {sexRatioData.map(d => (
+                                <tr key={d.year}>
+                                  <td>{d.year}</td>
+                                  <td><strong>{d.overallRatio.toFixed(1)}</strong></td>
+                                  <td>{d.atBirthRatio.toFixed(1)}</td>
+                                  <td>{d.childrenRatio.toFixed(1)}</td>
+                                  <td>{d.workingAgeRatio.toFixed(1)}</td>
+                                  <td>{d.elderlyRatio.toFixed(1)}</td>
+                                  <td>{d.totalMale.toLocaleString()}</td>
+                                  <td>{d.totalFemale.toLocaleString()}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
                   </>
@@ -1232,33 +1303,43 @@ export function Workspace() {
                     </div>
                     
                     {cohortData.length > 0 ? (
-                      <div className={styles.tableWrapper}>
-                        <table className={styles.resultsTable}>
-                          <thead>
-                            <tr>
-                              <th>Year</th>
-                              <th>Age</th>
-                              <th>Population</th>
-                              <th>Male</th>
-                              <th>Female</th>
-                              <th>Survival Rate</th>
-                              <th>Cumulative Survival</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {cohortData.map(d => (
-                              <tr key={d.year}>
-                                <td>{d.year}</td>
-                                <td>{d.age}</td>
-                                <td><strong>{d.population.toLocaleString()}</strong></td>
-                                <td>{d.male.toLocaleString()}</td>
-                                <td>{d.female.toLocaleString()}</td>
-                                <td>{d.survivalRate !== undefined ? `${(d.survivalRate * 100).toFixed(2)}%` : '—'}</td>
-                                <td>{d.cumulativeSurvival !== undefined ? `${(d.cumulativeSurvival * 100).toFixed(2)}%` : '—'}</td>
+                      <div className={styles.tableWithExport}>
+                        <button
+                          className={styles.exportButton}
+                          onClick={() => {
+                            downloadCSV(exportCohortTrackingCSV(cohortData, trackingYear), `cohort-tracking-${workspace.name}-born-${trackingYear}.csv`);
+                          }}
+                        >
+                          📥 Export CSV
+                        </button>
+                        <div className={styles.tableWrapper}>
+                          <table className={styles.resultsTable}>
+                            <thead>
+                              <tr>
+                                <th>Year</th>
+                                <th>Age</th>
+                                <th>Population</th>
+                                <th>Male</th>
+                                <th>Female</th>
+                                <th>Survival Rate</th>
+                                <th>Cumulative Survival</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {cohortData.map(d => (
+                                <tr key={d.year}>
+                                  <td>{d.year}</td>
+                                  <td>{d.age}</td>
+                                  <td><strong>{d.population.toLocaleString()}</strong></td>
+                                  <td>{d.male.toLocaleString()}</td>
+                                  <td>{d.female.toLocaleString()}</td>
+                                  <td>{d.survivalRate !== undefined ? `${(d.survivalRate * 100).toFixed(2)}%` : '—'}</td>
+                                  <td>{d.cumulativeSurvival !== undefined ? `${(d.cumulativeSurvival * 100).toFixed(2)}%` : '—'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     ) : (
                       <div className={styles.noData}>
@@ -1320,35 +1401,45 @@ export function Workspace() {
                         </ErrorBoundary>
                       </div>
                     ) : (
-                      <div className={styles.tableWrapper}>
-                        <table className={styles.resultsTable}>
-                          <thead>
-                            <tr>
-                              <th>Year</th>
-                              <th>Median Age</th>
-                              <th>Male Median</th>
-                              <th>Female Median</th>
-                              <th>Change</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {medianData.map(d => (
-                              <tr key={d.year}>
-                                <td>{d.year}</td>
-                                <td><strong>{d.medianAge.toFixed(1)}</strong></td>
-                                <td>{d.medianAgeMale.toFixed(1)}</td>
-                                <td>{d.medianAgeFemale.toFixed(1)}</td>
-                                <td>
-                                  {d.change !== undefined 
-                                    ? <span className={d.change > 0 ? styles.aging : styles.younging}>
-                                        {d.change > 0 ? '+' : ''}{d.change.toFixed(2)}
-                                      </span>
-                                    : '—'}
-                                </td>
+                      <div className={styles.tableWithExport}>
+                        <button
+                          className={styles.exportButton}
+                          onClick={() => {
+                            downloadCSV(exportMedianAgeCSV(medianData), `median-age-${workspace.name}.csv`);
+                          }}
+                        >
+                          📥 Export CSV
+                        </button>
+                        <div className={styles.tableWrapper}>
+                          <table className={styles.resultsTable}>
+                            <thead>
+                              <tr>
+                                <th>Year</th>
+                                <th>Median Age</th>
+                                <th>Male Median</th>
+                                <th>Female Median</th>
+                                <th>Change</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {medianData.map(d => (
+                                <tr key={d.year}>
+                                  <td>{d.year}</td>
+                                  <td><strong>{d.medianAge.toFixed(1)}</strong></td>
+                                  <td>{d.medianAgeMale.toFixed(1)}</td>
+                                  <td>{d.medianAgeFemale.toFixed(1)}</td>
+                                  <td>
+                                    {d.change !== undefined 
+                                      ? <span className={d.change > 0 ? styles.aging : styles.younging}>
+                                          {d.change > 0 ? '+' : ''}{d.change.toFixed(2)}
+                                        </span>
+                                      : '—'}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
                   </>
@@ -1393,33 +1484,43 @@ export function Workspace() {
                       </div>
                     </div>
                     
-                    <div className={styles.tableWrapper}>
-                      <table className={styles.resultsTable}>
-                        <thead>
-                          <tr>
-                            <th>Age (x)</th>
-                            <th>qₓ</th>
-                            <th>lₓ</th>
-                            <th>dₓ</th>
-                            <th>Lₓ</th>
-                            <th>Tₓ</th>
-                            <th>eₓ</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {lifeTable.map(row => (
-                            <tr key={row.age}>
-                              <td>{row.age}</td>
-                              <td>{(row.qx * 1000).toFixed(2)}‰</td>
-                              <td>{row.lx.toLocaleString()}</td>
-                              <td>{row.dx.toLocaleString()}</td>
-                              <td>{Math.round(row.Lx).toLocaleString()}</td>
-                              <td>{Math.round(row.Tx).toLocaleString()}</td>
-                              <td><strong>{row.ex.toFixed(1)}</strong></td>
+                    <div className={styles.tableWithExport}>
+                      <button
+                        className={styles.exportButton}
+                        onClick={() => {
+                          downloadCSV(exportLifeTableCSV(lifeTable), `life-table-${workspace.name}.csv`);
+                        }}
+                      >
+                        📥 Export CSV
+                      </button>
+                      <div className={styles.tableWrapper}>
+                        <table className={styles.resultsTable}>
+                          <thead>
+                            <tr>
+                              <th>Age (x)</th>
+                              <th>qₓ</th>
+                              <th>lₓ</th>
+                              <th>dₓ</th>
+                              <th>Lₓ</th>
+                              <th>Tₓ</th>
+                              <th>eₓ</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {lifeTable.map(row => (
+                              <tr key={row.age}>
+                                <td>{row.age}</td>
+                                <td>{(row.qx * 1000).toFixed(2)}‰</td>
+                                <td>{row.lx.toLocaleString()}</td>
+                                <td>{row.dx.toLocaleString()}</td>
+                                <td>{Math.round(row.Lx).toLocaleString()}</td>
+                                <td>{Math.round(row.Tx).toLocaleString()}</td>
+                                <td><strong>{row.ex.toFixed(1)}</strong></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                     
                     <div className={styles.lifeTableNote}>
