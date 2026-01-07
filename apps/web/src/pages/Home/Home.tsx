@@ -1,10 +1,18 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNatsStore } from '@/stores/natsStore';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
 import styles from './Home.module.css';
 
 export function Home() {
+  const navigate = useNavigate();
   const { status, error, lastPingResponse, isPinging, connect, ping } = useNatsStore();
+  const { getWorkspaceSummaries, createNewWorkspace, deleteWorkspace } = useWorkspaceStore();
   const [pingMessage, setPingMessage] = useState('Hello from TypeScript!');
+  const [newWorkspaceName, setNewWorkspaceName] = useState('');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  
+  const workspaces = getWorkspaceSummaries();
   
   useEffect(() => {
     // Auto-connect on mount
@@ -16,6 +24,22 @@ export function Home() {
       await ping(pingMessage);
     } catch (err) {
       console.error('Ping failed:', err);
+    }
+  };
+
+  const handleCreateWorkspace = () => {
+    if (newWorkspaceName.trim()) {
+      const id = createNewWorkspace(newWorkspaceName.trim());
+      setNewWorkspaceName('');
+      setShowCreateForm(false);
+      navigate(`/workspace/${id}`);
+    }
+  };
+
+  const handleDeleteWorkspace = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('Delete this workspace? This cannot be undone.')) {
+      deleteWorkspace(id);
     }
   };
   
@@ -139,6 +163,93 @@ export function Home() {
         </div>
       </section>
       
+      {/* Workspaces Section */}
+      <section className={styles.workspaces}>
+        <div className={styles.workspacesHeader}>
+          <h2>📁 Your Workspaces</h2>
+          <button 
+            className="btn btn-primary"
+            onClick={() => setShowCreateForm(true)}
+          >
+            + New Workspace
+          </button>
+        </div>
+        
+        {showCreateForm && (
+          <div className={styles.createForm}>
+            <input
+              type="text"
+              value={newWorkspaceName}
+              onChange={(e) => setNewWorkspaceName(e.target.value)}
+              placeholder="Workspace name (e.g., Czech Republic 2024)"
+              className={styles.createInput}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreateWorkspace();
+                if (e.key === 'Escape') setShowCreateForm(false);
+              }}
+            />
+            <button className="btn btn-primary" onClick={handleCreateWorkspace}>
+              Create
+            </button>
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => setShowCreateForm(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+        
+        {workspaces.length === 0 ? (
+          <div className={styles.emptyState}>
+            <p>No workspaces yet. Create one to start your demographic projection!</p>
+          </div>
+        ) : (
+          <div className={styles.workspaceList}>
+            {workspaces.map((ws) => (
+              <div 
+                key={ws.id} 
+                className={styles.workspaceCard}
+                onClick={() => navigate(`/workspace/${ws.id}`)}
+              >
+                <div className={styles.workspaceInfo}>
+                  <h4>{ws.name}</h4>
+                  <div className={styles.workspaceStatus}>
+                    <span className={ws.hasPopulation ? styles.statusOk : styles.statusMissing}>
+                      {ws.hasPopulation ? '✓' : '○'} Population
+                    </span>
+                    <span className={ws.hasMortality ? styles.statusOk : styles.statusMissing}>
+                      {ws.hasMortality ? '✓' : '○'} Mortality
+                    </span>
+                    <span className={ws.hasFertility ? styles.statusOk : styles.statusMissing}>
+                      {ws.hasFertility ? '✓' : '○'} Fertility
+                    </span>
+                    <span className={ws.hasMigration ? styles.statusOk : styles.statusOptional}>
+                      {ws.hasMigration ? '✓' : '○'} Migration
+                    </span>
+                  </div>
+                  <span className={styles.workspaceDate}>
+                    Updated {new Date(ws.updatedAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className={styles.workspaceActions}>
+                  {ws.projectionStatus === 'completed' && (
+                    <span className={styles.projectionBadge}>📊 Results</span>
+                  )}
+                  <button 
+                    className="btn btn-ghost btn-sm"
+                    onClick={(e) => handleDeleteWorkspace(ws.id, e)}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+      
       {/* Sample Data Section */}
       <section className={styles.sampleData}>
         <div className={styles.sampleDataCard}>
@@ -207,14 +318,6 @@ export function Home() {
         </div>
       </section>
       
-      <section className={styles.actions}>
-        <button className="btn btn-primary" disabled={status !== 'connected'}>
-          Create New Scenario
-        </button>
-        <button className="btn btn-secondary" disabled={status !== 'connected'}>
-          Load Sample Data
-        </button>
-      </section>
     </div>
   );
 }

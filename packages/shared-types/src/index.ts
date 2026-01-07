@@ -117,3 +117,30 @@ export {
   createStorageError,
   isStorageError,
 } from './storage';
+
+// Workspace types
+export type {
+  PopulationData,
+  PopulationRow,
+  MortalityData,
+  MortalityRow,
+  FertilityData,
+  FertilityRow,
+  MigrationData,
+  MigrationRow,
+  ImportStatus,
+  DataImportState,
+  ProjectionParameters,
+  ProjectionStatus,
+  ProjectionState,
+  Workspace,
+  WorkspaceSummary,
+} from './workspace';
+
+export {
+  DEFAULT_PROJECTION_PARAMS,
+  createWorkspace,
+  isReadyForProjection,
+  getWorkspaceValidationErrors,
+  toWorkspaceSummary,
+} from './workspace';

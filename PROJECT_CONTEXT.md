@@ -1,6 +1,6 @@
 # Project Context
 
-> **Last Updated:** 2026-01-07 (v0.1.0)
+> **Last Updated:** 2026-01-07 (v0.2.0)
 
 ## Overview
 
@@ -131,6 +131,13 @@ interface Shock {
 Popula/
 ├── apps/
 │   └── web/                        # React frontend
+│       ├── public/
+│       │   └── sample-data/        # Sample datasets ✅
+│       │       ├── population.csv  # Humania age-sex distribution
+│       │       ├── mortality.csv   # Death probabilities
+│       │       ├── fertility.csv   # Birth rates
+│       │       ├── migration.csv   # Net migration
+│       │       └── humania.json    # Census metadata
 │       ├── src/
 │       │   ├── components/
 │       │   │   ├── ConnectionStatus/
@@ -141,13 +148,15 @@ Popula/
 │       │   │   ├── useNats.ts      # NATS connection hook
 │       │   │   └── useProjection.ts # Projection subscription
 │       │   ├── services/
-│       │   │   └── nats.ts         # NATS WebSocket service
+│       │   │   ├── nats.ts         # NATS WebSocket service
+│       │   │   └── csvParser.ts    # CSV import parser ✅
 │       │   ├── stores/
 │       │   │   ├── natsStore.ts    # Connection state
+│       │   │   ├── workspaceStore.ts # Workspace management ✅
 │       │   │   └── scenarioStore.ts
 │       │   └── pages/
-│       │       ├── Home/           # Main page with ping demo
-│       │       └── Scenario/
+│       │       ├── Home/           # Main page + workspace list ✅
+│       │       └── Workspace/      # Workspace detail page ✅
 │       ├── package.json
 │       └── vite.config.ts
 │
@@ -158,6 +167,7 @@ Popula/
 │           ├── messages.ts         # NATS message envelopes
 │           ├── scenario.ts
 │           ├── shock.ts            # Shock types & helpers
+│           ├── workspace.ts        # Workspace types ✅
 │           └── storage.ts
 │
 ├── worker/                         # Rust worker
@@ -200,7 +210,10 @@ Popula/
 | Component | Location | Purpose |
 |-----------|----------|---------|
 | `NatsService` | apps/web/src/services/ | NATS WebSocket client |
+| `csvParser` | apps/web/src/services/ | CSV file parsing for imports |
 | `useNatsStore` | apps/web/src/stores/ | Connection state (Zustand) |
+| `useWorkspaceStore` | apps/web/src/stores/ | Workspace management (Zustand) |
+| `Workspace` | apps/web/src/pages/ | Workspace UI with data import |
 | `PingHandler` | worker/src/handlers/ | Demo request/reply handler |
 | `CohortComponentModel` | worker/src/engine/ccm.rs | CCM implementation |
 | `ScenarioHandler` | worker/src/handlers/ | Process scenario messages |
@@ -217,7 +230,7 @@ Popula/
 
 ## Current State
 
-**Phase:** Core Engine Implementation
+**Phase:** Frontend Integration
 
 **Completed:**
 - [x] Project architecture design
@@ -234,22 +247,34 @@ Popula/
   - Aging (cohort progression)
   - Mortality (survival rates)
   - Fertility (births with sex ratio)
+  - Migration (net migration by age/gender)
   - Multi-year projections
+- [x] **Sample dataset: Republic of Humania**
+  - 10.2M fictional population
+  - Realistic demographic rates
+  - 5 CSV/JSON files for testing
+- [x] **Workspaces feature**
+  - Unlimited workspaces per user
+  - CSV file import (population, mortality, fertility, migration)
+  - CSV parser with validation (17 unit tests)
+  - Projection parameters form
+  - Results table display
+  - "Load Humania Sample" one-click loading
+  - localStorage persistence
 
 **Test Coverage:**
-- TypeScript: 41 tests passing (shared-types + web)
-- Rust: 30 tests passing (CCM + handlers + storage)
-- Total: **71 tests**
+- TypeScript: 58 tests passing (shared-types + web)
+- Rust: 38 tests passing (CCM + handlers + storage)
+- Total: **96 tests**
 
 **In Progress:**
-- [ ] Migration component for CCM
+- [ ] Wire CCM engine to NATS for real projections
 - [ ] Shock modifier integration with CCM
 
 **Pending:**
-- [ ] Wire CCM engine to NATS scenario handler
-- [ ] React frontend scenario builder UI
 - [ ] Population pyramid visualization (D3.js)
-- [ ] Sample data loading (Czech Republic)
+- [ ] Export results to CSV
+- [ ] Multi-region support
 
 ## Development Setup (Windows 11)
 
@@ -316,16 +341,18 @@ For each year t → t+1:
 1. FERTILITY: Calculate births from women age 15-49
    births = Σ(women[age] × fertility_rate[age])
    
-2. MORTALITY: Apply survival rates
+2. MIGRATION: Add/subtract net migrants by age/gender
+   population[age] += net_migration[age]
+   (emigration capped at available population)
+   
+3. MORTALITY: Apply survival rates
    survivors[age] = population[age] × (1 - mortality_rate[age])
    
-3. AGING: Move survivors up one year
+4. AGING: Move survivors up one year
    population[age+1, t+1] = survivors[age, t]
    
-4. NEWBORNS: Add births at age 0
+5. NEWBORNS: Add births at age 0
    population[0, t+1] = births × sex_ratio_split
-
-5. MIGRATION: Add/subtract net migrants (TODO)
 ```
 
 ## Notes
@@ -340,12 +367,14 @@ For each year t → t+1:
 ## Next Steps
 
 1. ~~Implement minimal CCM engine (mortality + aging + fertility)~~ ✅
-2. Add migration component to CCM
-3. Wire CCM to NATS scenario handler
-4. Create React scenario builder UI
-5. Build population pyramid visualization (D3.js)
-6. Load sample Czech Republic data
+2. ~~Add migration component to CCM~~ ✅
+3. ~~Create workspaces with CSV import~~ ✅
+4. ~~Create sample dataset (Humania)~~ ✅
+5. Wire CCM to NATS scenario handler (real projections)
+6. Build population pyramid visualization (D3.js)
+7. Add shock modifiers (pandemics, wars, crises)
+8. Export results to CSV/Excel
 
 ---
 
-*This is Chapter One of the production implementation.*
+*This is Chapter Two of the production implementation.*
