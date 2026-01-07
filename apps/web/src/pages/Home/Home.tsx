@@ -6,11 +6,12 @@ import styles from './Home.module.css';
 
 export function Home() {
   const navigate = useNavigate();
-  const { status, error, lastPingResponse, isPinging, connect, ping } = useNatsStore();
+  const { status, error, lastPingResponse, isPinging, connect, disconnect, ping } = useNatsStore();
   const { getWorkspaceSummaries, createNewWorkspace, deleteWorkspace } = useWorkspaceStore();
   const [pingMessage, setPingMessage] = useState('Hello from TypeScript!');
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
   
   const workspaces = getWorkspaceSummaries();
   
@@ -40,6 +41,24 @@ export function Home() {
     e.stopPropagation();
     if (confirm('Delete this workspace? This cannot be undone.')) {
       deleteWorkspace(id);
+    }
+  };
+
+  const handleClearStorage = () => {
+    if (confirm('Clear ALL local storage? This will delete all workspaces and cached data.')) {
+      localStorage.clear();
+      window.location.reload();
+    }
+  };
+
+  const handleReconnect = async () => {
+    setIsReconnecting(true);
+    try {
+      disconnect();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await connect();
+    } finally {
+      setIsReconnecting(false);
     }
   };
   
@@ -315,6 +334,67 @@ export function Home() {
               </a>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Developer Tools Section */}
+      <section className={styles.devTools}>
+        <div className={styles.devToolsCard}>
+          <h3>🛠️ Developer Tools</h3>
+          
+          <div className={styles.devToolsGrid}>
+            <div className={styles.devToolItem}>
+              <h4>Storage</h4>
+              <p>Clear all local storage including workspaces and cached data.</p>
+              <button 
+                className="btn btn-secondary"
+                onClick={handleClearStorage}
+              >
+                🗑️ Clear Local Storage
+              </button>
+            </div>
+            
+            <div className={styles.devToolItem}>
+              <h4>NATS Connection</h4>
+              <p>
+                Status: <span className={`${styles.statusBadge} ${styles[status]}`}>
+                  {status}
+                </span>
+              </p>
+              <button 
+                className="btn btn-secondary"
+                onClick={handleReconnect}
+                disabled={isReconnecting}
+              >
+                🔄 {isReconnecting ? 'Reconnecting...' : 'Reconnect NATS'}
+              </button>
+            </div>
+            
+            <div className={styles.devToolItem}>
+              <h4>Services</h4>
+              <p>Backend services must be restarted from terminal.</p>
+              <div className={styles.serviceList}>
+                <div className={styles.serviceItem}>
+                  <span>NATS Server</span>
+                  <code>.\infra\scripts\start-nats.ps1</code>
+                </div>
+                <div className={styles.serviceItem}>
+                  <span>Rust Worker</span>
+                  <code>cd worker && cargo run</code>
+                </div>
+                <div className={styles.serviceItem}>
+                  <span>Frontend</span>
+                  <code>pnpm dev</code>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {error && (
+            <div className={styles.devToolsError}>
+              ⚠️ Error: {error}
+            </div>
+          )}
         </div>
       </section>
       

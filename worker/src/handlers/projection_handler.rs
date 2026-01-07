@@ -84,6 +84,22 @@ pub struct ProjectionYearResult {
     pub growth_rate: f64,
 }
 
+/// Statistics about the input data received
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InputDataStats {
+    pub population_rows: usize,
+    pub mortality_rows: usize,
+    pub fertility_rows: usize,
+    pub migration_rows: usize,
+    pub total_initial_population: i64,
+    pub male_population: i64,
+    pub female_population: i64,
+    pub base_year: u32,
+    pub end_year: u32,
+    pub years_projected: u32,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectionRunResponse {
@@ -93,6 +109,9 @@ pub struct ProjectionRunResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
     pub processing_time_ms: u64,
+    /// Detailed stats about input data
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_stats: Option<InputDataStats>,
 }
 
 /// Message envelope (matches TypeScript definition)
@@ -144,6 +163,26 @@ pub fn run_projection(request: &ProjectionRunRequest) -> Result<ProjectionRunRes
     // Use a region ID for this workspace
     let region_id = "DEFAULT";
     
+    // Calculate input statistics
+    let male_pop: f64 = request.population.iter().map(|r| r.male).sum();
+    let female_pop: f64 = request.population.iter().map(|r| r.female).sum();
+    let total_initial_pop = male_pop + female_pop;
+    let migration_rows = request.migration.as_ref().map(|m| m.len()).unwrap_or(0);
+    
+    info!(
+        "📊 Received data: {} population rows, {} mortality rows, {} fertility rows, {} migration rows",
+        request.population.len(),
+        request.mortality.len(),
+        request.fertility.len(),
+        migration_rows
+    );
+    info!(
+        "📊 Input population: {} total ({} male, {} female)",
+        total_initial_pop.round() as i64,
+        male_pop.round() as i64,
+        female_pop.round() as i64
+    );
+    
     // Load population data
     let cohorts: Vec<Cohort> = request.population.iter().flat_map(|row| {
         vec![
@@ -163,6 +202,14 @@ pub fn run_projection(request: &ProjectionRunRequest) -> Result<ProjectionRunRes
     }).collect();
     
     ccm.load_population(&cohorts);
+    
+    // Debug: Log loaded population stats
+    let loaded_pop = ccm.total_population();
+    info!(
+        "📊 Loaded population: {} people from {} cohorts (expected ~10.2M for Humania)",
+        loaded_pop.round() as i64,
+        cohorts.len()
+    );
     
     // Load mortality table
     let mortality_rates: Vec<MortalityRate> = request.mortality.iter().map(|row| {
@@ -233,12 +280,34 @@ pub fn run_projection(request: &ProjectionRunRequest) -> Result<ProjectionRunRes
     
     let processing_time = start.elapsed().as_millis() as u64;
     
+    // Build input statistics
+    let input_stats = InputDataStats {
+        population_rows: request.population.len(),
+        mortality_rows: request.mortality.len(),
+        fertility_rows: request.fertility.len(),
+        migration_rows,
+        total_initial_population: total_initial_pop.round() as i64,
+        male_population: male_pop.round() as i64,
+        female_population: female_pop.round() as i64,
+        base_year: request.base_year,
+        end_year: request.end_year,
+        years_projected: request.end_year - request.base_year + 1,
+    };
+    
+    info!(
+        "📊 Projection complete: {} years in {}ms, final pop = {}",
+        input_stats.years_projected,
+        processing_time,
+        results.last().map(|r| r.total_population).unwrap_or(0)
+    );
+    
     Ok(ProjectionRunResponse {
         workspace_id: request.workspace_id.clone(),
         success: true,
         years: results,
         error: None,
         processing_time_ms: processing_time,
+        input_stats: Some(input_stats),
     })
 }
 
@@ -291,6 +360,7 @@ impl ProjectionHandler {
                                 years: vec![],
                                 error: Some(err),
                                 processing_time_ms: 0,
+                                input_stats: None,
                             }
                         }
                     };
@@ -317,6 +387,7 @@ impl ProjectionHandler {
                             years: vec![],
                             error: Some(format!("Failed to parse request: {}", e)),
                             processing_time_ms: 0,
+                            input_stats: None,
                         };
                         let error_envelope = MessageEnvelope::new(error_response, None);
                         let response_json = serde_json::to_string(&error_envelope)?;

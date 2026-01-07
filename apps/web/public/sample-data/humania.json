@@ -17,9 +17,9 @@
     "methodology": "Full enumeration with online self-response option"
   },
   "summary": {
-    "totalPopulation": 10247893,
-    "malePopulation": 4987234,
-    "femalePopulation": 5260659,
+    "totalPopulation": 10248376,
+    "malePopulation": 4987159,
+    "femalePopulation": 5261217,
     "sexRatio": 94.8,
     "medianAge": 41.2,
     "lifeExpectancy": {
@@ -52,7 +52,7 @@
     {
       "code": "HUM",
       "name": "Humania (National)",
-      "population": 10247893
+      "population": 10248376
     }
   ],
   "dataFiles": {

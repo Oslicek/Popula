@@ -76,6 +76,7 @@ export type {
   ProjectionMigrationRow,
   ProjectionRunRequest,
   ProjectionYearResult,
+  InputDataStats,
   ProjectionRunResponse,
   ProjectionProgressPayload,
   ProjectionResultPayload,

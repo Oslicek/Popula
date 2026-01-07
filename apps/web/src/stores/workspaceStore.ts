@@ -21,7 +21,6 @@ import type {
 import {
   createWorkspace,
   toWorkspaceSummary,
-  DEFAULT_PROJECTION_PARAMS,
 } from '@popula/shared-types';
 
 // ============================================================

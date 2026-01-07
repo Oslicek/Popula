@@ -209,7 +209,8 @@ export function Workspace() {
       ]);
       
       // Parse and load each dataset
-      setPopulationData(id, parsePopulationCSV(popText), 'population.csv (Humania)');
+      const popData = parsePopulationCSV(popText);
+      setPopulationData(id, popData, 'population.csv (Humania)');
       setMortalityData(id, parseMortalityCSV(mortText), 'mortality.csv (Humania)');
       setFertilityData(id, parseFertilityCSV(fertText), 'fertility.csv (Humania)');
       setMigrationData(id, parseMigrationCSV(migText), 'migration.csv (Humania)');
@@ -288,9 +289,15 @@ export function Workspace() {
           status: 'completed',
           progress: 100,
           results,
+          processingTimeMs: response.processingTimeMs,
+          inputStats: response.inputStats,
+          completedAt: new Date().toISOString(),
         });
         
         console.log(`✅ Projection completed in ${response.processingTimeMs}ms`);
+        if (response.inputStats) {
+          console.log('📊 Input stats:', response.inputStats);
+        }
       } else {
         setProjectionState(id, {
           status: 'error',
@@ -491,6 +498,85 @@ export function Workspace() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </section>
+      )}
+
+      {/* Worker Run Info */}
+      {workspace.projection.inputStats && (
+        <section className={styles.section}>
+          <h2>🔧 Last Worker Run</h2>
+          
+          <div className={styles.workerInfo}>
+            <div className={styles.workerInfoGrid}>
+              <div className={styles.workerInfoItem}>
+                <span className={styles.workerInfoLabel}>Processing Time</span>
+                <span className={styles.workerInfoValue}>
+                  {workspace.projection.processingTimeMs?.toLocaleString() ?? 0} ms
+                </span>
+              </div>
+              
+              <div className={styles.workerInfoItem}>
+                <span className={styles.workerInfoLabel}>Years Projected</span>
+                <span className={styles.workerInfoValue}>
+                  {workspace.projection.inputStats.yearsProjected} years
+                  <span className={styles.workerInfoDetail}>
+                    ({workspace.projection.inputStats.baseYear} → {workspace.projection.inputStats.endYear})
+                  </span>
+                </span>
+              </div>
+              
+              <div className={styles.workerInfoItem}>
+                <span className={styles.workerInfoLabel}>Completed At</span>
+                <span className={styles.workerInfoValue}>
+                  {workspace.projection.completedAt 
+                    ? new Date(workspace.projection.completedAt).toLocaleString()
+                    : 'N/A'}
+                </span>
+              </div>
+            </div>
+            
+            <h4>Input Data Received</h4>
+            <div className={styles.inputStatsGrid}>
+              <div className={styles.inputStatItem}>
+                <span className={styles.inputStatLabel}>Population Rows</span>
+                <span className={styles.inputStatValue}>{workspace.projection.inputStats.populationRows}</span>
+              </div>
+              <div className={styles.inputStatItem}>
+                <span className={styles.inputStatLabel}>Mortality Rows</span>
+                <span className={styles.inputStatValue}>{workspace.projection.inputStats.mortalityRows}</span>
+              </div>
+              <div className={styles.inputStatItem}>
+                <span className={styles.inputStatLabel}>Fertility Rows</span>
+                <span className={styles.inputStatValue}>{workspace.projection.inputStats.fertilityRows}</span>
+              </div>
+              <div className={styles.inputStatItem}>
+                <span className={styles.inputStatLabel}>Migration Rows</span>
+                <span className={styles.inputStatValue}>{workspace.projection.inputStats.migrationRows}</span>
+              </div>
+            </div>
+            
+            <h4>Initial Population (from Input)</h4>
+            <div className={styles.inputStatsGrid}>
+              <div className={styles.inputStatItem}>
+                <span className={styles.inputStatLabel}>Total</span>
+                <span className={styles.inputStatValue}>
+                  {workspace.projection.inputStats.totalInitialPopulation.toLocaleString()}
+                </span>
+              </div>
+              <div className={styles.inputStatItem}>
+                <span className={styles.inputStatLabel}>Male</span>
+                <span className={styles.inputStatValue}>
+                  {workspace.projection.inputStats.malePopulation.toLocaleString()}
+                </span>
+              </div>
+              <div className={styles.inputStatItem}>
+                <span className={styles.inputStatLabel}>Female</span>
+                <span className={styles.inputStatValue}>
+                  {workspace.projection.inputStats.femalePopulation.toLocaleString()}
+                </span>
+              </div>
+            </div>
           </div>
         </section>
       )}

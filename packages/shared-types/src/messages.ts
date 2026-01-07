@@ -171,6 +171,20 @@ export interface ProjectionYearResult {
   readonly growthRate: number;
 }
 
+/** Statistics about input data processed by the worker */
+export interface InputDataStats {
+  readonly populationRows: number;
+  readonly mortalityRows: number;
+  readonly fertilityRows: number;
+  readonly migrationRows: number;
+  readonly totalInitialPopulation: number;
+  readonly malePopulation: number;
+  readonly femalePopulation: number;
+  readonly baseYear: number;
+  readonly endYear: number;
+  readonly yearsProjected: number;
+}
+
 /** Run projection response payload */
 export interface ProjectionRunResponse {
   readonly workspaceId: string;
@@ -178,6 +192,7 @@ export interface ProjectionRunResponse {
   readonly years: ProjectionYearResult[];
   readonly error?: string;
   readonly processingTimeMs: number;
+  readonly inputStats?: InputDataStats;
 }
 
 /** Projection progress update */

@@ -5,7 +5,8 @@
  * Users can create unlimited workspaces and import data into each.
  */
 
-import type { Cohort, MortalityRate, FertilityRate, ProjectionYear } from './demographic';
+import type { ProjectionYear } from './demographic';
+import type { InputDataStats } from './messages';
 
 // ============================================================
 // Data Import Types
@@ -118,6 +119,9 @@ export interface ProjectionState {
   readonly progress?: number;  // 0-100
   readonly error?: string;
   readonly results?: ProjectionYear[];
+  readonly processingTimeMs?: number;
+  readonly inputStats?: InputDataStats;
+  readonly completedAt?: string;  // ISO date
 }
 
 // ============================================================
