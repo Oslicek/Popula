@@ -1,15 +1,17 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import { GeoJsonLayer } from '@deck.gl/layers';
 import type { Feature, Geometry } from 'geojson';
 import { reprojectFeatureCollection27700ToWgs84 } from './reprojection';
+import { augmentFeaturesWithPopulation, createPopulationColorScale, getLastYearFromCsv, parsePopulationCsv } from './populationData';
 import type { RegionProperties } from './types';
 import styles from './Map.module.css';
 
 // UK Local Authority GeoJSON path
 const UK_REGIONS_URL = '/sample-data/uk-local-authorities.geojson';
+const UK_POPULATION_CSV_URL = '/sample-data/2022 SNPP Population persons.csv';
 
 // Color scale for regions (pronounced)
 const REGION_FILL_COLOR: [number, number, number, number] = [255, 64, 128, 160]; // bright magenta, semi-opaque
@@ -30,6 +32,12 @@ export function Map() {
   const [regionsData, setRegionsData] = useState<Feature<Geometry, RegionProperties>[] | null>(null);
   const [regionsLoading, setRegionsLoading] = useState(true);
   const [regionsError, setRegionsError] = useState<string | null>(null);
+  const [populationByCode, setPopulationByCode] = useState<Map<string, number> | null>(null);
+  const [populationLoading, setPopulationLoading] = useState(true);
+  const [populationError, setPopulationError] = useState<string | null>(null);
+  const [populationYear, setPopulationYear] = useState<string | null>(null);
+  const [layerFeatures, setLayerFeatures] = useState<Feature<Geometry, RegionProperties>[] | null>(null);
+  const [hoverInfo, setHoverInfo] = useState<{ name: string; population: number | null } | null>(null);
 
   // Load GeoJSON data
   useEffect(() => {
@@ -51,14 +59,54 @@ export function Map() {
       });
   }, []);
 
+  // Load population CSV and build lookup
+  useEffect(() => {
+    setPopulationLoading(true);
+    fetch(UK_POPULATION_CSV_URL)
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.text();
+      })
+      .then(text => {
+        const latestYear = getLastYearFromCsv(text) ?? '2047';
+        setPopulationYear(latestYear);
+        const map = parsePopulationCsv(text, latestYear);
+        setPopulationByCode(map);
+        setPopulationLoading(false);
+        console.log(`[Map] Loaded population CSV, latest year ${latestYear}, areas ${map.size}`);
+      })
+      .catch(error => {
+        console.error('[Map] Failed to load population CSV:', error);
+        setPopulationError(error.message);
+        setPopulationLoading(false);
+      });
+  }, []);
+
+  // Combine regions with population lookup
+  useEffect(() => {
+    if (!regionsData) return;
+    if (populationByCode) {
+      setLayerFeatures(augmentFeaturesWithPopulation(regionsData, populationByCode));
+    } else {
+      setLayerFeatures(augmentFeaturesWithPopulation(regionsData, new Map()));
+    }
+  }, [regionsData, populationByCode]);
+
+  const populationColorScale = useMemo(() => {
+    if (!populationByCode) return null;
+    return createPopulationColorScale(populationByCode);
+  }, [populationByCode]);
+
   // Create deck.gl layers
   const getLayers = useCallback(() => {
-    if (!regionsData || !overlayVisible) return [];
+    if (!overlayVisible) return [];
+    const data = layerFeatures || regionsData;
+    if (!data) return [];
 
     return [
       new GeoJsonLayer<RegionProperties>({
         id: 'uk-regions',
-        data: regionsData,
+        data,
         pickable: true,
         stroked: true,
         filled: true,
@@ -67,8 +115,16 @@ export function Map() {
         lineWidthUnits: 'pixels',
         lineWidthMinPixels: 2.5,
         getFillColor: (d: Feature<Geometry, RegionProperties>) => {
-          const name = d.properties?.LAD23NM || '';
-          return name === hoveredRegion ? REGION_HOVER_COLOR : REGION_FILL_COLOR;
+            const name = d.properties?.LAD23NM || '';
+            const pop = (d.properties as any)?.population ?? null;
+            const hasData = (d.properties as any)?.hasPopulationData;
+            const baseColor =
+              populationColorScale && hasData !== undefined
+                ? populationColorScale(pop)
+                : hasData
+                ? REGION_FILL_COLOR
+                : [180, 180, 180, 120];
+            return name === hoveredRegion ? REGION_HOVER_COLOR : (baseColor as [number, number, number, number]);
         },
         getLineColor: REGION_LINE_COLOR,
         getLineWidth: 2,
@@ -76,16 +132,21 @@ export function Map() {
           if (info.object) {
             const props = (info.object as Feature<Geometry, RegionProperties>).properties;
             setHoveredRegion(props?.LAD23NM || null);
+            setHoverInfo({
+              name: props?.LAD23NM || '',
+              population: (props as any)?.population ?? null
+            });
           } else {
             setHoveredRegion(null);
+            setHoverInfo(null);
           }
         },
         updateTriggers: {
-          getFillColor: [hoveredRegion]
+          getFillColor: [hoveredRegion, populationColorScale, layerFeatures]
         }
       })
     ];
-  }, [regionsData, hoveredRegion, overlayVisible]);
+  }, [overlayVisible, layerFeatures, hoveredRegion, populationColorScale, regionsData]);
 
   // Initialize map
   useEffect(() => {
@@ -246,6 +307,21 @@ export function Map() {
             <strong>Regions:</strong> {regionsData.length}
           </span>
         )}
+        {populationYear && (
+          <span className={styles.coord}>
+            <strong>Population year:</strong> {populationYear}
+          </span>
+        )}
+        {populationLoading && (
+          <span className={styles.coord}>
+            <strong>Population:</strong> Loading...
+          </span>
+        )}
+        {populationError && (
+          <span className={styles.coordError}>
+            <strong>Error:</strong> {populationError}
+          </span>
+        )}
       </div>
 
       <div className={styles.infoBar} style={{ marginTop: 'var(--space-2)' }}>
@@ -267,14 +343,39 @@ export function Map() {
         </label>
       </div>
       
-      {hoveredRegion && (
+      {hoverInfo && (
         <div className={styles.tooltip}>
-          <strong>📍 {hoveredRegion}</strong>
+          <strong>📍 {hoverInfo.name}</strong>
+          <div>
+            {hoverInfo.population !== null ? (
+              <>Population: {Math.round(hoverInfo.population).toLocaleString()}</>
+            ) : (
+              <>No population data</>
+            )}
+          </div>
         </div>
       )}
       
       <div className={styles.mapWrapper}>
         <div ref={mapContainer} className={styles.mapContainer} />
+      </div>
+
+      <div className={styles.instructions}>
+        <h3>Legend</h3>
+        <div className={styles.legend}>
+          <div className={styles.legendRow}>
+            <span className={styles.legendSwatch} style={{ background: 'rgba(237,248,251,0.8)' }} />
+            <span className={styles.legendSwatch} style={{ background: 'rgba(191,211,230,0.86)' }} />
+            <span className={styles.legendSwatch} style={{ background: 'rgba(158,188,218,0.9)' }} />
+            <span className={styles.legendSwatch} style={{ background: 'rgba(117,107,177,0.92)' }} />
+            <span className={styles.legendSwatch} style={{ background: 'rgba(84,39,143,0.94)' }} />
+            <span className={styles.legendLabel}>Higher population →</span>
+          </div>
+          <div className={styles.legendRow}>
+            <span className={styles.legendSwatch} style={{ background: 'rgba(180,180,180,0.5)' }} />
+            <span className={styles.legendLabel}>No data (Scotland / Northern Ireland)</span>
+          </div>
+        </div>
       </div>
       
       <div className={styles.instructions}>

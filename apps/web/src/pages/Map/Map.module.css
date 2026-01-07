@@ -74,6 +74,31 @@
   pointer-events: none;
 }
 
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.legendSwatch {
+  width: 32px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.legendLabel {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
 .mapWrapper {
   flex: 1;
   min-height: 500px;
