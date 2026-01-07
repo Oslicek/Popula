@@ -1358,11 +1358,11 @@ export function Workspace() {
           )}
 
           {/* Life Table View */}
-          {resultView === 'life-table' && workspace.data?.mortality && (
+          {resultView === 'life-table' && workspace.mortality && (
             <div className={styles.lifeTableView}>
               {(() => {
                 // Convert mortality data to life table format
-                const mortalityRates = workspace.data.mortality.map(row => ({
+                const mortalityRates = workspace.mortality!.rows.map(row => ({
                   age: row.age,
                   qx: (row.male + row.female) / 2, // Average of male/female rates
                 }));
@@ -1431,7 +1431,7 @@ export function Workspace() {
             </div>
           )}
 
-          {resultView === 'life-table' && !workspace.data?.mortality && (
+          {resultView === 'life-table' && !workspace.mortality && (
             <div className={styles.noData}>
               <p>Mortality data is required to generate a life table. Please import mortality data first.</p>
             </div>
