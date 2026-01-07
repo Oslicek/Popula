@@ -9,7 +9,7 @@ import {
   parseMigrationCSV,
   CSVParseError,
 } from '@/services/csvParser';
-import type { Workspace as WorkspaceType, DataImportState } from '@popula/shared-types';
+import type { DataImportState } from '@popula/shared-types';
 import { isReadyForProjection, getWorkspaceValidationErrors } from '@popula/shared-types';
 import styles from './Workspace.module.css';
 
@@ -22,12 +22,11 @@ interface FileUploadProps {
   onClear: () => void;
   icon: string;
   title: string;
-  description: string;
+  description: React.ReactNode;
   optional?: boolean;
 }
 
 function FileUpload({
-  dataType,
   importState,
   onFileSelect,
   onClear,
@@ -62,7 +61,7 @@ function FileUpload({
       />
       
       <div className={styles.uploadHeader}>
-        <span className={styles.uploadIcon}>{icon}</span>
+        <div className={styles.uploadIcon}>{icon}</div>
         <div className={styles.uploadTitle}>
           <h4>{title}</h4>
           {optional && <span className={styles.optionalBadge}>Optional</span>}
@@ -72,16 +71,18 @@ function FileUpload({
       <p className={styles.uploadDescription}>{description}</p>
       
       {importState.status === 'empty' && (
-        <button className="btn btn-secondary" onClick={handleClick}>
-          Upload CSV
-        </button>
+        <div className={styles.uploadActions}>
+          <button className="btn btn-secondary" onClick={handleClick}>
+            Choose File
+          </button>
+        </div>
       )}
       
       {importState.status === 'loaded' && (
         <div className={styles.loadedState}>
           <div className={styles.fileInfo}>
             <span className={styles.fileName}>{importState.fileName}</span>
-            <span className={styles.rowCount}>{importState.rowCount} rows</span>
+            <span className={styles.rowCount}>{importState.rowCount} ages</span>
           </div>
           <div className={styles.loadedActions}>
             <button className="btn btn-secondary btn-sm" onClick={handleClick}>
@@ -302,12 +303,12 @@ export function Workspace() {
       {/* Data Import Section */}
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2>📁 Import Data</h2>
+          <h2>Import Data</h2>
           <button 
-            className="btn btn-secondary"
+            className={styles.sampleButton}
             onClick={handleLoadSample}
           >
-            🌍 Load Humania Sample
+            <span>🌍</span> Load Humania Sample
           </button>
         </div>
         
@@ -319,7 +320,7 @@ export function Workspace() {
             onClear={() => clearData(id, 'population')}
             icon="👥"
             title="Population"
-            description="Age-sex distribution (age, male, female)"
+            description={<>Initial age-sex distribution. Format: <code>age, male, female</code></>}
           />
           
           <FileUpload
@@ -327,9 +328,9 @@ export function Workspace() {
             importState={workspace.mortalityImport}
             onFileSelect={(file) => handleFileUpload('mortality', file)}
             onClear={() => clearData(id, 'mortality')}
-            icon="📉"
+            icon="💀"
             title="Mortality"
-            description="Death probabilities by age (age, male, female)"
+            description={<>Death probability by age (0-1). Format: <code>age, male, female</code></>}
           />
           
           <FileUpload
@@ -339,7 +340,7 @@ export function Workspace() {
             onClear={() => clearData(id, 'fertility')}
             icon="👶"
             title="Fertility"
-            description="Birth rates by age (age, rate)"
+            description={<>Annual birth rate per woman. Format: <code>age, rate</code></>}
           />
           
           <FileUpload
@@ -349,7 +350,7 @@ export function Workspace() {
             onClear={() => clearData(id, 'migration')}
             icon="✈️"
             title="Migration"
-            description="Net migration by age (age, male, female)"
+            description={<>Net annual migrants (± values). Format: <code>age, male, female</code></>}
             optional
           />
         </div>
