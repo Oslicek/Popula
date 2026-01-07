@@ -1,7 +1,16 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import styles from './Header.module.css';
 
 export function Header() {
+  const location = useLocation();
+  
+  const isActive = (path: string) => {
+    if (path === '/') {
+      return location.pathname === '/' || location.pathname.startsWith('/workspace');
+    }
+    return location.pathname.startsWith(path);
+  };
+  
   return (
     <header className={styles.header}>
       <div className={styles.container}>
@@ -11,9 +20,18 @@ export function Header() {
         </Link>
         
         <nav className={styles.nav}>
-          <Link to="/" className={styles.navLink}>Dashboard</Link>
-          <Link to="/scenarios" className={styles.navLink}>Scenarios</Link>
-          <Link to="/data" className={styles.navLink}>Data</Link>
+          <Link 
+            to="/" 
+            className={`${styles.navLink} ${isActive('/') ? styles.active : ''}`}
+          >
+            📊 Workspaces
+          </Link>
+          <Link 
+            to="/map" 
+            className={`${styles.navLink} ${isActive('/map') ? styles.active : ''}`}
+          >
+            🗺️ Map
+          </Link>
         </nav>
       </div>
     </header>

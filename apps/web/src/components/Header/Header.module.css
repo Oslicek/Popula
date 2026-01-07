@@ -59,3 +59,8 @@
   color: var(--color-text-primary);
   background: var(--color-bg-tertiary);
 }
+
+.navLink.active {
+  color: var(--color-accent-primary);
+  background: rgba(64, 156, 255, 0.15);
+}
