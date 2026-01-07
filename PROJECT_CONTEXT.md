@@ -142,13 +142,19 @@ Popula/
 │       │   │       ├── YearlyChangeChart.tsx
 │       │   │       ├── PopulationPyramidChart.tsx
 │       │   │       ├── AgeGroupChart.tsx
-│       │   │       └── DependencyRatioChart.tsx
+│       │   │       ├── DependencyRatioChart.tsx
+│       │   │       ├── SexRatioChart.tsx
+│       │   │       ├── MedianAgeChart.tsx
+│       │   │       └── index.ts
 │       │   ├── hooks/
 │       │   │   ├── useNats.ts      # NATS connection hook
 │       │   │   └── useProjection.ts # Projection subscription
 │       │   ├── services/
 │       │   │   ├── nats.ts         # NATS WebSocket service
 │       │   │   └── csvParser.ts    # CSV import parser ✅
+│       │   ├── utils/
+│       │   │   ├── demographicCalculations.ts  # Calculation utilities ✅
+│       │   │   └── csvExport.ts    # CSV/ZIP export utilities ✅
 │       │   ├── stores/
 │       │   │   ├── natsStore.ts    # Connection state + projection
 │       │   │   ├── workspaceStore.ts # Workspace management ✅
@@ -272,20 +278,28 @@ Popula/
   - Population Pyramid table + pyramid chart
   - Age Group Summary table + stacked bar chart
   - Dependency Ratios table + multi-line chart
+  - Sex Ratio table + multi-line chart
+  - Cohort Tracking table
+  - Median Age Progression table + line chart
+  - Life Table (period life expectancy)
   - Year slider with play/pause animation
   - Adjustable animation speed
+- [x] **CSV Export**
+  - Individual table exports (8 table types)
+  - "Export All Reports" button (ZIP archive)
+  - JSZip library for client-side ZIP generation
+  - Floating-point precision handling
 
 **Test Coverage:**
-- TypeScript: 97 tests passing (shared-types + web)
+- TypeScript: 96 tests passing (shared-types + web)
 - Rust: 46 tests passing (CCM + handlers + storage)
-- Total: **143 tests**
+- Total: **142 tests**
 
 **In Progress:**
 - [ ] Shock modifier integration with CCM
 
 **Pending:**
 - [ ] Shock modifier integration with CCM
-- [ ] Export results to CSV
 - [ ] Multi-region support
 
 ## Development Setup (Windows 11)
@@ -400,8 +414,8 @@ For each year t → t+1:
 5. ~~Wire CCM to NATS (real projections)~~ ✅
 6. ~~Build visualizations (Vega charts)~~ ✅
 7. ~~Add more result views (Sex Ratio, Cohort Tracking, Median Age, Life Table)~~ ✅
-8. Add shock modifiers (pandemics, wars, crises)
-9. Export results to CSV/Excel
+8. ~~Export results to CSV/ZIP~~ ✅
+9. Add shock modifiers (pandemics, wars, crises)
 10. Multi-region support
 
 ---

@@ -710,28 +710,28 @@ export function Workspace() {
                     groups: calculateAgeGroups(yearData.cohorts),
                   }));
                   
-                  const dependencyRatios = workspace.projection.populationByYear?.map(yearData => 
-                    calculateDependencyRatios(yearData.year, yearData.cohorts)
-                  );
+                  const dependencyRatios = workspace.projection.populationByYear
+                    ? calculateDependencyRatios(workspace.projection.populationByYear)
+                    : undefined;
                   
-                  const sexRatios = workspace.projection.populationByYear?.map(yearData =>
-                    calculateSexRatios(yearData.year, yearData.cohorts, workspace.fertility?.rows)
-                  );
+                  const sexRatios = workspace.projection.populationByYear
+                    ? calculateSexRatios(workspace.projection.populationByYear)
+                    : undefined;
                   
                   const cohortTracking = workspace.projection.populationByYear && 
                     workspace.projection.populationByYear.length > 0
-                    ? calculateCohortTracking(
-                        workspace.projection.populationByYear[0].year,
-                        workspace.projection.populationByYear
-                      )
+                    ? {
+                        birthYear: workspace.projection.populationByYear[0].year,
+                        data: calculateCohortTracking(
+                          workspace.projection.populationByYear,
+                          workspace.projection.populationByYear[0].year
+                        )
+                      }
                     : undefined;
                   
-                  const medianAge = workspace.projection.populationByYear?.map(yearData =>
-                    calculateMedianAgeProgression(yearData.year, yearData.cohorts)
-                  ).map((row, idx, arr) => ({
-                    ...row,
-                    change: idx > 0 ? row.medianAge - arr[idx - 1].medianAge : undefined,
-                  }));
+                  const medianAge = workspace.projection.populationByYear
+                    ? calculateMedianAgeProgression(workspace.projection.populationByYear)
+                    : undefined;
                   
                   const lifeTable = workspace.mortality?.rows
                     ? calculateLifeTable(workspace.mortality.rows)
