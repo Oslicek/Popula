@@ -171,6 +171,22 @@ export interface ProjectionYearResult {
   readonly growthRate: number;
 }
 
+/** Population snapshot by age and sex for a single year */
+export interface CohortSnapshot {
+  readonly age: number;
+  readonly male: number;
+  readonly female: number;
+}
+
+/** Full population data for a single year */
+export interface YearPopulationSnapshot {
+  readonly year: number;
+  readonly cohorts: CohortSnapshot[];
+  readonly totalMale: number;
+  readonly totalFemale: number;
+  readonly total: number;
+}
+
 /** Statistics about input data processed by the worker */
 export interface InputDataStats {
   readonly populationRows: number;
@@ -193,6 +209,8 @@ export interface ProjectionRunResponse {
   readonly error?: string;
   readonly processingTimeMs: number;
   readonly inputStats?: InputDataStats;
+  /** Full population snapshots by year (age/sex breakdown) */
+  readonly populationByYear?: YearPopulationSnapshot[];
 }
 
 /** Projection progress update */

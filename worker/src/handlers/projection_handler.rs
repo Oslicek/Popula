@@ -84,6 +84,25 @@ pub struct ProjectionYearResult {
     pub growth_rate: f64,
 }
 
+/// Population snapshot by age and sex
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CohortSnapshot {
+    pub age: u32,
+    pub male: i64,
+    pub female: i64,
+}
+
+/// Full population data for a single year
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct YearPopulationSnapshot {
+    pub year: u32,
+    pub cohorts: Vec<CohortSnapshot>,
+    pub total_male: i64,
+    pub total_female: i64,
+    pub total: i64,
+}
+
 /// Statistics about the input data received
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -112,6 +131,9 @@ pub struct ProjectionRunResponse {
     /// Detailed stats about input data
     #[serde(skip_serializing_if = "Option::is_none")]
     pub input_stats: Option<InputDataStats>,
+    /// Full population snapshots by year (age/sex breakdown)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub population_by_year: Option<Vec<YearPopulationSnapshot>>,
 }
 
 /// Message envelope (matches TypeScript definition)
@@ -138,6 +160,43 @@ impl<T> MessageEnvelope<T> {
 // ============================================================
 // Projection Engine Runner
 // ============================================================
+
+/// Capture current population state as a snapshot
+fn capture_population_snapshot(ccm: &CohortComponentModel, year: u32) -> YearPopulationSnapshot {
+    use std::collections::HashMap;
+    
+    let cohorts = ccm.get_cohorts();
+    
+    // Aggregate by age (combining genders into single row)
+    let mut by_age: HashMap<u32, (i64, i64)> = HashMap::new();
+    
+    for cohort in &cohorts {
+        let entry = by_age.entry(cohort.age).or_insert((0, 0));
+        match cohort.gender {
+            Gender::Male => entry.0 += cohort.count.round() as i64,
+            Gender::Female => entry.1 += cohort.count.round() as i64,
+        }
+    }
+    
+    // Convert to sorted vector of CohortSnapshot
+    let mut snapshots: Vec<CohortSnapshot> = by_age
+        .into_iter()
+        .map(|(age, (male, female))| CohortSnapshot { age, male, female })
+        .collect();
+    snapshots.sort_by_key(|s| s.age);
+    
+    // Calculate totals
+    let total_male: i64 = snapshots.iter().map(|s| s.male).sum();
+    let total_female: i64 = snapshots.iter().map(|s| s.female).sum();
+    
+    YearPopulationSnapshot {
+        year,
+        cohorts: snapshots,
+        total_male,
+        total_female,
+        total: total_male + total_female,
+    }
+}
 
 /// Run a projection using the CCM engine
 pub fn run_projection(request: &ProjectionRunRequest) -> Result<ProjectionRunResponse, String> {
@@ -263,6 +322,10 @@ pub fn run_projection(request: &ProjectionRunRequest) -> Result<ProjectionRunRes
     // Run projection year by year
     let regions = vec![region_id.to_string()];
     let mut results = Vec::new();
+    let mut population_snapshots = Vec::new();
+    
+    // Capture initial population (base year, before any projection)
+    population_snapshots.push(capture_population_snapshot(&ccm, request.base_year));
     
     for year in request.base_year..=request.end_year {
         let year_result = ccm.project_one_year(year, &regions);
@@ -276,6 +339,10 @@ pub fn run_projection(request: &ProjectionRunRequest) -> Result<ProjectionRunRes
             natural_change: year_result.natural_change.round() as i64,
             growth_rate: year_result.growth_rate,
         });
+        
+        // Capture population snapshot after this year's projection
+        // The snapshot represents population at the END of this year
+        population_snapshots.push(capture_population_snapshot(&ccm, year + 1));
     }
     
     let processing_time = start.elapsed().as_millis() as u64;
@@ -308,6 +375,7 @@ pub fn run_projection(request: &ProjectionRunRequest) -> Result<ProjectionRunRes
         error: None,
         processing_time_ms: processing_time,
         input_stats: Some(input_stats),
+        population_by_year: Some(population_snapshots),
     })
 }
 
@@ -361,6 +429,7 @@ impl ProjectionHandler {
                                 error: Some(err),
                                 processing_time_ms: 0,
                                 input_stats: None,
+                                population_by_year: None,
                             }
                         }
                     };
@@ -388,6 +457,7 @@ impl ProjectionHandler {
                             error: Some(format!("Failed to parse request: {}", e)),
                             processing_time_ms: 0,
                             input_stats: None,
+                            population_by_year: None,
                         };
                         let error_envelope = MessageEnvelope::new(error_response, None);
                         let response_json = serde_json::to_string(&error_envelope)?;

@@ -1,6 +1,6 @@
 # Project Context
 
-> **Last Updated:** 2026-01-07 (v0.2.0)
+> **Last Updated:** 2026-01-07 (v0.3.0)
 
 ## Overview
 
@@ -17,7 +17,7 @@
 | Frontend | React 19 + TypeScript | User interface |
 | Build Tool | Vite 6 | Fast development, HMR |
 | Styling | CSS Modules | Scoped styles |
-| Visualization | D3.js | Population pyramids, charts |
+| Visualization | Vega | Charts (line, pyramid, bar) |
 | State Management | Zustand | Global state (scenarios, results) |
 | Message Broker | NATS | Frontend ↔ Worker communication |
 | Worker | Rust (Tokio) | Demographic engine, heavy computation |
@@ -60,19 +60,12 @@
 ```
 Frontend                    NATS                    Rust Worker
    │                         │                           │
-   │  popula.scenario.submit │                           │
+   │  popula.projection.run  │                           │
    │─────────────────────────▶                           │
-   │                         │ popula.scenario.submit    │
+   │                         │ popula.projection.run     │
    │                         │──────────────────────────▶│
-   │                         │                           │ Validate & store
-   │                         │  popula.scenario.accepted │
-   │                         │◀──────────────────────────│
-   │ popula.scenario.accepted│                           │
-   │◀─────────────────────────                           │
-   │                         │                           │ Run CCM engine
-   │                         │ popula.projection.progress│ (year by year)
-   │◀────────────────────────│◀──────────────────────────│
-   │                         │                           │
+   │                         │                           │ Load CCM engine
+   │                         │                           │ Run year-by-year
    │                         │  popula.projection.result │
    │◀────────────────────────│◀──────────────────────────│
    │                         │                           │
@@ -143,7 +136,13 @@ Popula/
 │       │   │   ├── ConnectionStatus/
 │       │   │   ├── Header/
 │       │   │   ├── Footer/
-│       │   │   └── Layout/
+│       │   │   ├── Layout/
+│       │   │   ├── ErrorBoundary.tsx   # Error boundary for charts ✅
+│       │   │   └── charts/              # Vega chart components ✅
+│       │   │       ├── YearlyChangeChart.tsx
+│       │   │       ├── PopulationPyramidChart.tsx
+│       │   │       ├── AgeGroupChart.tsx
+│       │   │       └── DependencyRatioChart.tsx
 │       │   ├── hooks/
 │       │   │   ├── useNats.ts      # NATS connection hook
 │       │   │   └── useProjection.ts # Projection subscription
@@ -151,7 +150,7 @@ Popula/
 │       │   │   ├── nats.ts         # NATS WebSocket service
 │       │   │   └── csvParser.ts    # CSV import parser ✅
 │       │   ├── stores/
-│       │   │   ├── natsStore.ts    # Connection state
+│       │   │   ├── natsStore.ts    # Connection state + projection
 │       │   │   ├── workspaceStore.ts # Workspace management ✅
 │       │   │   └── scenarioStore.ts
 │       │   └── pages/
@@ -164,7 +163,7 @@ Popula/
 │   └── shared-types/               # Shared TypeScript types
 │       └── src/
 │           ├── demographic.ts      # Cohort, Population, etc.
-│           ├── messages.ts         # NATS message envelopes
+│           ├── messages.ts         # NATS message envelopes ✅
 │           ├── scenario.ts
 │           ├── shock.ts            # Shock types & helpers
 │           ├── workspace.ts        # Workspace types ✅
@@ -182,6 +181,7 @@ Popula/
 │   │   ├── handlers/
 │   │   │   ├── mod.rs
 │   │   │   ├── ping.rs             # Ping/pong demo handler ✅
+│   │   │   ├── projection_handler.rs # Projection handler ✅
 │   │   │   └── scenario.rs
 │   │   └── storage/
 │   │       ├── mod.rs
@@ -211,10 +211,11 @@ Popula/
 |-----------|----------|---------|
 | `NatsService` | apps/web/src/services/ | NATS WebSocket client |
 | `csvParser` | apps/web/src/services/ | CSV file parsing for imports |
-| `useNatsStore` | apps/web/src/stores/ | Connection state (Zustand) |
+| `useNatsStore` | apps/web/src/stores/ | Connection state + projection |
 | `useWorkspaceStore` | apps/web/src/stores/ | Workspace management (Zustand) |
 | `Workspace` | apps/web/src/pages/ | Workspace UI with data import |
 | `PingHandler` | worker/src/handlers/ | Demo request/reply handler |
+| `ProjectionHandler` | worker/src/handlers/ | Run CCM projections via NATS |
 | `CohortComponentModel` | worker/src/engine/ccm.rs | CCM implementation |
 | `ScenarioHandler` | worker/src/handlers/ | Process scenario messages |
 | `Storage` | worker/src/storage/ | DB-agnostic persistence |
@@ -230,7 +231,7 @@ Popula/
 
 ## Current State
 
-**Phase:** Frontend Integration
+**Phase:** Interactive Visualization
 
 **Completed:**
 - [x] Project architecture design
@@ -261,18 +262,29 @@ Popula/
   - Results table display
   - "Load Humania Sample" one-click loading
   - localStorage persistence
+- [x] **End-to-end projection pipeline**
+  - Frontend sends projection request via NATS
+  - Rust worker runs CCM engine with real data
+  - Worker returns full cohort data per year
+  - Frontend displays results with processing stats
+- [x] **Interactive visualizations (Vega)**
+  - Year-over-Year Change table + line chart (dual Y-axes)
+  - Population Pyramid table + pyramid chart
+  - Age Group Summary table + stacked bar chart
+  - Dependency Ratios table + multi-line chart
+  - Year slider with play/pause animation
+  - Adjustable animation speed
 
 **Test Coverage:**
-- TypeScript: 58 tests passing (shared-types + web)
-- Rust: 38 tests passing (CCM + handlers + storage)
-- Total: **96 tests**
+- TypeScript: 75 tests passing (shared-types + web)
+- Rust: 46 tests passing (CCM + handlers + storage)
+- Total: **121 tests**
 
 **In Progress:**
-- [ ] Wire CCM engine to NATS for real projections
-- [ ] Shock modifier integration with CCM
+- [ ] Additional result views (Sex Ratio, Cohort Tracking, Median Age, Life Table)
 
 **Pending:**
-- [ ] Population pyramid visualization (D3.js)
+- [ ] Shock modifier integration with CCM
 - [ ] Export results to CSV
 - [ ] Multi-region support
 
@@ -326,6 +338,7 @@ cargo watch -x test         # Rust (requires cargo-watch)
 - Year-by-year projection accuracy
 - Message serialization/deserialization
 - Storage adapter operations
+- Result view calculations (age groups, dependency ratios, etc.)
 
 **Test Coverage Goals:**
 - TypeScript: 90%+ for shared-types
@@ -355,6 +368,15 @@ For each year t → t+1:
    population[0, t+1] = births × sex_ratio_split
 ```
 
+## Result Views (Implemented)
+
+| View | Description | Chart Type |
+|------|-------------|------------|
+| Year-over-Year Change | Population, births, deaths, migration per year | Dual-axis line chart |
+| Population Pyramid | Age-sex distribution for a selected year | Horizontal bar (pyramid) |
+| Age Group Summary | Policy-relevant age brackets (0-14, 15-24, etc.) | Stacked bar chart |
+| Dependency Ratios | Youth, old-age, total dependency over time | Multi-line chart |
+
 ## Notes
 
 - Local development on Windows 11
@@ -363,6 +385,7 @@ For each year t → t+1:
 - Same code paths for local and production
 - CCM (Cohort-Component Method) is the core algorithm
 - Max age is 120 (open-ended interval)
+- Vega (full version) used for all charts
 
 ## Next Steps
 
@@ -370,11 +393,13 @@ For each year t → t+1:
 2. ~~Add migration component to CCM~~ ✅
 3. ~~Create workspaces with CSV import~~ ✅
 4. ~~Create sample dataset (Humania)~~ ✅
-5. Wire CCM to NATS scenario handler (real projections)
-6. Build population pyramid visualization (D3.js)
-7. Add shock modifiers (pandemics, wars, crises)
-8. Export results to CSV/Excel
+5. ~~Wire CCM to NATS (real projections)~~ ✅
+6. ~~Build visualizations (Vega charts)~~ ✅
+7. Add more result views (Sex Ratio, Cohort Tracking, Median Age, Life Table)
+8. Add shock modifiers (pandemics, wars, crises)
+9. Export results to CSV/Excel
+10. Multi-region support
 
 ---
 
-*This is Chapter Two of the production implementation.*
+*This is Chapter Three of the production implementation.*

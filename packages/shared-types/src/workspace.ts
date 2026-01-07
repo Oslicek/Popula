@@ -6,7 +6,7 @@
  */
 
 import type { ProjectionYear } from './demographic';
-import type { InputDataStats } from './messages';
+import type { InputDataStats, YearPopulationSnapshot } from './messages';
 
 // ============================================================
 // Data Import Types
@@ -122,6 +122,8 @@ export interface ProjectionState {
   readonly processingTimeMs?: number;
   readonly inputStats?: InputDataStats;
   readonly completedAt?: string;  // ISO date
+  /** Full population snapshots by year (age/sex breakdown) */
+  readonly populationByYear?: YearPopulationSnapshot[];
 }
 
 // ============================================================

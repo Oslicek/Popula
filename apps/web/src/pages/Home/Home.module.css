@@ -510,9 +510,81 @@
 }
 
 .devToolsCard h3 {
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-4);
   font-size: var(--text-lg);
   color: var(--color-text-primary);
+}
+
+/* Status Bar */
+.statusBar {
+  display: flex;
+  gap: var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+}
+
+.statusBar .statusItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.statusBar .statusLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.statusBar .statusValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+/* Ping Bar */
+.pingBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-5);
+}
+
+.pingLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.pingBar .pingInput {
+  flex: 0 1 200px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+}
+
+.pingBar .pingInput:focus {
+  outline: none;
+  border-color: var(--color-accent-primary);
+}
+
+.pingBar .pingInput:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pingReply {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-success);
+  margin-left: var(--space-2);
 }
 
 .devToolsGrid {
