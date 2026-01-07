@@ -37,7 +37,7 @@ export function Map() {
   const [populationError, setPopulationError] = useState<string | null>(null);
   const [populationYear, setPopulationYear] = useState<string | null>(null);
   const [layerFeatures, setLayerFeatures] = useState<Feature<Geometry, RegionProperties>[] | null>(null);
-  const [hoverInfo, setHoverInfo] = useState<{ name: string; population: number | null } | null>(null);
+  const [hoverInfo, setHoverInfo] = useState<{ name: string; population: number | null; density: number | null; areaSqKm: number | null } | null>(null);
 
   // Load GeoJSON data
   useEffect(() => {
@@ -92,10 +92,29 @@ export function Map() {
     }
   }, [regionsData, populationByCode]);
 
-  const populationColorScale = useMemo(() => {
-    if (!populationByCode) return null;
-    return createPopulationColorScale(populationByCode);
-  }, [populationByCode]);
+  const densityColorScale = useMemo(() => {
+    if (!layerFeatures) return null;
+    const densities = layerFeatures.map((f) => f.properties?.density ?? null);
+    return createPopulationColorScale(densities);
+  }, [layerFeatures]);
+
+  const summary = useMemo(() => {
+    if (!layerFeatures) return null;
+    const withData = layerFeatures.filter((f) => f.properties?.hasPopulationData);
+    const withoutData = layerFeatures.length - withData.length;
+    const densities = withData
+      .map((f) => f.properties?.density)
+      .filter((v): v is number => Number.isFinite(v as number))
+      .sort((a, b) => a - b);
+    if (densities.length === 0) {
+      return { withData: withData.length, withoutData, min: null, median: null, max: null };
+    }
+    const min = densities[0];
+    const max = densities[densities.length - 1];
+    const mid = Math.floor(densities.length / 2);
+    const median = densities.length % 2 === 0 ? (densities[mid - 1] + densities[mid]) / 2 : densities[mid];
+    return { withData: withData.length, withoutData, min, median, max };
+  }, [layerFeatures]);
 
   // Create deck.gl layers
   const getLayers = useCallback(() => {
@@ -113,28 +132,30 @@ export function Map() {
         extruded: false,
         opacity: 0.85,
         lineWidthUnits: 'pixels',
-        lineWidthMinPixels: 2.5,
+        lineWidthMinPixels: 1.2,
         getFillColor: (d: Feature<Geometry, RegionProperties>) => {
             const name = d.properties?.LAD23NM || '';
-            const pop = (d.properties as any)?.population ?? null;
-            const hasData = (d.properties as any)?.hasPopulationData;
-            const baseColor =
-              populationColorScale && hasData !== undefined
-                ? populationColorScale(pop)
-                : hasData
-                ? REGION_FILL_COLOR
-                : [180, 180, 180, 120];
+          const density = (d.properties as any)?.density ?? null;
+          const hasData = (d.properties as any)?.hasPopulationData;
+          const baseColor =
+            densityColorScale && hasData !== undefined
+              ? densityColorScale(density)
+              : hasData
+              ? REGION_FILL_COLOR
+              : [180, 180, 180, 120];
             return name === hoveredRegion ? REGION_HOVER_COLOR : (baseColor as [number, number, number, number]);
         },
         getLineColor: REGION_LINE_COLOR,
-        getLineWidth: 2,
+        getLineWidth: 1.2,
         onHover: (info) => {
           if (info.object) {
             const props = (info.object as Feature<Geometry, RegionProperties>).properties;
             setHoveredRegion(props?.LAD23NM || null);
             setHoverInfo({
               name: props?.LAD23NM || '',
-              population: (props as any)?.population ?? null
+              population: (props as any)?.population ?? null,
+              density: (props as any)?.density ?? null,
+              areaSqKm: (props as any)?.areaSqKm ?? null
             });
           } else {
             setHoveredRegion(null);
@@ -142,11 +163,11 @@ export function Map() {
           }
         },
         updateTriggers: {
-          getFillColor: [hoveredRegion, populationColorScale, layerFeatures]
+          getFillColor: [hoveredRegion, densityColorScale, layerFeatures]
         }
       })
     ];
-  }, [overlayVisible, layerFeatures, hoveredRegion, populationColorScale, regionsData]);
+  }, [overlayVisible, layerFeatures, hoveredRegion, densityColorScale, regionsData]);
 
   // Initialize map
   useEffect(() => {
@@ -350,15 +371,67 @@ export function Map() {
             {hoverInfo.population !== null ? (
               <>Population: {Math.round(hoverInfo.population).toLocaleString()}</>
             ) : (
-              <>No population data</>
+              <>Population: No data</>
             )}
           </div>
+          <div>
+            {hoverInfo.density !== null && hoverInfo.areaSqKm ? (
+              <>Density: {Math.round(hoverInfo.density).toLocaleString()} / km²</>
+            ) : (
+              <>Density: No data</>
+            )}
+          </div>
+          {hoverInfo.areaSqKm ? (
+            <div>Area: {hoverInfo.areaSqKm.toFixed(2)} km²</div>
+          ) : (
+            <div>Area: n/a</div>
+          )}
         </div>
       )}
       
       <div className={styles.mapWrapper}>
         <div ref={mapContainer} className={styles.mapContainer} />
       </div>
+
+      {summary && (
+        <div className={styles.summary}>
+          <h3>Summary</h3>
+          <div className={styles.summaryGrid}>
+            <div className={styles.summaryItem}>
+              <div className={styles.summaryLabel}>Regions with data</div>
+              <div className={styles.summaryValue}>{summary.withData}</div>
+            </div>
+            <div className={styles.summaryItem}>
+              <div className={styles.summaryLabel}>Regions without data</div>
+              <div className={styles.summaryValue}>{summary.withoutData}</div>
+            </div>
+            <div className={styles.summaryItem}>
+              <div className={styles.summaryLabel}>Min density</div>
+              <div className={styles.summaryValue}>
+                {summary.min !== null ? `${Math.round(summary.min).toLocaleString()} / km²` : 'n/a'}
+              </div>
+            </div>
+            <div className={styles.summaryItem}>
+              <div className={styles.summaryLabel}>Median density</div>
+              <div className={styles.summaryValue}>
+                {summary.median !== null ? `${Math.round(summary.median).toLocaleString()} / km²` : 'n/a'}
+              </div>
+            </div>
+            <div className={styles.summaryItem}>
+              <div className={styles.summaryLabel}>Max density</div>
+              <div className={styles.summaryValue}>
+                {summary.max !== null ? `${Math.round(summary.max).toLocaleString()} / km²` : 'n/a'}
+              </div>
+            </div>
+            {populationYear && (
+              <div className={styles.summaryItem}>
+                <div className={styles.summaryLabel}>Year</div>
+                <div className={styles.summaryValue}>{populationYear}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className={styles.instructions}>
         <h3>Legend</h3>
@@ -369,7 +442,7 @@ export function Map() {
             <span className={styles.legendSwatch} style={{ background: 'rgba(158,188,218,0.9)' }} />
             <span className={styles.legendSwatch} style={{ background: 'rgba(117,107,177,0.92)' }} />
             <span className={styles.legendSwatch} style={{ background: 'rgba(84,39,143,0.94)' }} />
-            <span className={styles.legendLabel}>Higher population →</span>
+            <span className={styles.legendLabel}>Higher population density →</span>
           </div>
           <div className={styles.legendRow}>
             <span className={styles.legendSwatch} style={{ background: 'rgba(180,180,180,0.5)' }} />

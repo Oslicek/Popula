@@ -7,6 +7,10 @@ export interface RegionProperties {
   LONG?: number;
   LAT?: number;
   GlobalID?: string;
+  areaSqKm?: number | null;
+  population?: number | null;
+  density?: number | null;
+  hasPopulationData?: boolean;
   [key: string]: unknown;
 }
 

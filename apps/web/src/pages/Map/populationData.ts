@@ -45,11 +45,17 @@ export function augmentFeaturesWithPopulation(
   return features.map((f) => {
     const code = f.properties?.LAD23CD;
     const population = code ? populationByCode.get(code) ?? null : null;
+    const areaSqKm = f.properties?.areaSqKm ?? null;
+    const density =
+      population !== null && areaSqKm !== null && areaSqKm > 0
+        ? population / areaSqKm
+        : null;
     return {
       ...f,
       properties: {
         ...f.properties,
         population,
+        density,
         hasPopulationData: population !== null
       }
     };
@@ -57,10 +63,10 @@ export function augmentFeaturesWithPopulation(
 }
 
 /**
- * Build a quantile color scale for population values. No-data returns a gray fill.
+ * Build a quantile-like color scale for values (population density). No-data returns a gray fill.
  */
-export function createPopulationColorScale(populationByCode: Map<string, number>) {
-  const values = Array.from(populationByCode.values()).filter((v) => Number.isFinite(v)).sort((a, b) => a - b);
+export function createPopulationColorScale(valuesInput: Array<number | null | undefined>) {
+  const values = valuesInput.filter((v): v is number => Number.isFinite(v as number)).sort((a, b) => a - b);
   const colors: [number, number, number, number][] = [
     [237, 248, 251, 200],
     [191, 211, 230, 220],

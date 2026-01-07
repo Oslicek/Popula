@@ -15,12 +15,12 @@ const sampleGeo: FeatureCollection<Geometry, RegionProperties> = {
   features: [
     {
       type: 'Feature',
-      properties: { LAD23CD: 'E06000001', LAD23NM: 'County A' },
+      properties: { LAD23CD: 'E06000001', LAD23NM: 'County A', areaSqKm: 0.5 },
       geometry: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]] }
     },
     {
       type: 'Feature',
-      properties: { LAD23CD: 'S12000045', LAD23NM: 'County C (no data)' },
+      properties: { LAD23CD: 'S12000045', LAD23NM: 'County C (no data)', areaSqKm: 0.8 },
       geometry: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]] }
     }
   ]
@@ -41,14 +41,17 @@ describe('populationData helpers', () => {
 
     expect(withData.properties?.population).toBe(220);
     expect(withData.properties?.hasPopulationData).toBe(true);
+    expect(withData.properties?.density).toBeCloseTo(440); // 220 / 0.5
     expect(noData.properties?.population).toBe(null);
     expect(noData.properties?.hasPopulationData).toBe(false);
+    expect(noData.properties?.density).toBe(null);
   });
 
   it('creates a color scale that returns data colors and a no-data color', () => {
     const popMap = parsePopulationCsv(sampleCsv, '2022');
-    const colorScale = createPopulationColorScale(popMap);
-    const dataColor = colorScale(220);
+    const densities = augmentFeaturesWithPopulation(sampleGeo.features, popMap).map((f) => f.properties?.density ?? null);
+    const colorScale = createPopulationColorScale(densities);
+    const dataColor = colorScale(440);
     const noDataColor = colorScale(null);
 
     expect(dataColor).toHaveLength(4);

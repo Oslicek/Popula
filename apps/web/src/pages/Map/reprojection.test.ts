@@ -48,5 +48,13 @@ describe('reprojectFeatureCollection27700ToWgs84', () => {
     expect(result.features).toHaveLength(1);
     expect(result.features[0].properties?.LAD23NM).toBe('Sample District');
   });
+
+  it('computes area in km² from BNG coordinates before reprojection', () => {
+    const result = reprojectFeatureCollection27700ToWgs84(sampleMultiPolygon);
+    const area = result.features[0].properties?.areaSqKm as number;
+    // 100m x 100m square ~ 0.01 km²
+    expect(area).toBeGreaterThan(0.009);
+    expect(area).toBeLessThan(0.011);
+  });
 });
 
