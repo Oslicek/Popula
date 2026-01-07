@@ -9,7 +9,10 @@ import {
   parseMigrationCSV,
   CSVParseError,
 } from '@/services/csvParser';
-import type { DataImportState } from '@popula/shared-types';
+import type { 
+  DataImportState,
+  ProjectionRunRequest,
+} from '@popula/shared-types';
 import { isReadyForProjection, getWorkspaceValidationErrors } from '@popula/shared-types';
 import styles from './Workspace.module.css';
 
@@ -224,9 +227,11 @@ export function Workspace() {
   };
 
   const handleRunProjection = async () => {
-    if (!isReadyForProjection(workspace)) {
+    if (!isReadyForProjection(workspace) || !workspace.population || !workspace.mortality || !workspace.fertility) {
       return;
     }
+    
+    const { runProjection } = useNatsStore.getState();
     
     // Set running state
     setProjectionState(id, {
@@ -236,49 +241,70 @@ export function Workspace() {
       error: undefined,
     });
     
-    // TODO: Send to Rust worker via NATS
-    // For now, simulate a projection locally
-    const years = endYear - baseYear;
-    const results = [];
-    
-    // Simple simulation (will be replaced with NATS call)
-    let population = workspace.population?.total || 0;
-    
-    for (let year = baseYear; year <= endYear; year++) {
-      const progress = ((year - baseYear) / years) * 100;
+    try {
+      // Build the request payload
+      const request: ProjectionRunRequest = {
+        workspaceId: id,
+        baseYear,
+        endYear,
+        sexRatioAtBirth: sexRatio,
+        population: workspace.population.rows.map(row => ({
+          age: row.age,
+          male: row.male,
+          female: row.female,
+        })),
+        mortality: workspace.mortality.rows.map(row => ({
+          age: row.age,
+          male: row.male,
+          female: row.female,
+        })),
+        fertility: workspace.fertility.rows.map(row => ({
+          age: row.age,
+          rate: row.rate,
+        })),
+        migration: workspace.migration?.rows.map(row => ({
+          age: row.age,
+          male: row.male,
+          female: row.female,
+        })),
+      };
       
+      // Send to Rust worker via NATS
+      const response = await runProjection(request);
+      
+      if (response.success) {
+        // Convert response to our format
+        const results = response.years.map(year => ({
+          year: year.year,
+          totalPopulation: year.totalPopulation,
+          births: year.births,
+          deaths: year.deaths,
+          netMigration: year.netMigration,
+          naturalChange: year.naturalChange,
+          growthRate: year.growthRate,
+        }));
+        
+        setProjectionState(id, {
+          status: 'completed',
+          progress: 100,
+          results,
+        });
+        
+        console.log(`✅ Projection completed in ${response.processingTimeMs}ms`);
+      } else {
+        setProjectionState(id, {
+          status: 'error',
+          error: response.error || 'Unknown error',
+        });
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Projection failed';
       setProjectionState(id, {
-        currentYear: year,
-        progress,
+        status: 'error',
+        error: errorMessage,
       });
-      
-      // Simulate demographic change (placeholder)
-      const births = population * 0.01;
-      const deaths = population * 0.009;
-      const migration = workspace.migration?.netTotal || 0;
-      const naturalChange = births - deaths;
-      
-      population = population + naturalChange + migration;
-      
-      results.push({
-        year,
-        totalPopulation: Math.round(population),
-        births: Math.round(births),
-        deaths: Math.round(deaths),
-        netMigration: migration,
-        naturalChange: Math.round(naturalChange),
-        growthRate: ((naturalChange + migration) / population) * 100,
-      });
-      
-      // Small delay to show progress
-      await new Promise(resolve => setTimeout(resolve, 20));
+      console.error('Projection error:', err);
     }
-    
-    setProjectionState(id, {
-      status: 'completed',
-      progress: 100,
-      results,
-    });
   };
 
   const validationErrors = getWorkspaceValidationErrors(workspace);

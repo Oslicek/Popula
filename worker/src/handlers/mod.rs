@@ -4,9 +4,11 @@
 
 mod ping;
 mod scenario;
+mod projection_handler;
 
 pub use ping::{PingHandler, PingRequest, PingResponse, SUBJECT_PING};
 pub use scenario::ScenarioHandler;
+pub use projection_handler::{ProjectionHandler, SUBJECT_PROJECTION_RUN};
 
 use async_nats::Client;
 use anyhow::Result;
@@ -31,6 +33,14 @@ pub async fn start_handlers(client: Client, storage: Box<dyn Storage>) -> Result
     tokio::spawn(async move {
         if let Err(e) = scenario_handler.start().await {
             tracing::error!("Scenario handler error: {}", e);
+        }
+    });
+    
+    // Start projection handler
+    let projection_handler = ProjectionHandler::new(client.clone());
+    tokio::spawn(async move {
+        if let Err(e) = projection_handler.start().await {
+            tracing::error!("Projection handler error: {}", e);
         }
     });
     

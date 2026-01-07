@@ -55,6 +55,9 @@ export const SUBJECTS = {
   scenarioDeleted: (id: string) => `popula.scenario.${id}.deleted`,
   scenarioError: (id: string) => `popula.scenario.${id}.error`,
   
+  // Projection commands (request/reply pattern)
+  PROJECTION_RUN: 'popula.projection.run',
+  
   // Projection events (use template: popula.projection.<id>.<event>)
   projectionProgress: (scenarioId: string) => `popula.projection.${scenarioId}.progress`,
   projectionResult: (scenarioId: string) => `popula.projection.${scenarioId}.result`,
@@ -117,6 +120,65 @@ export interface ScenarioDeletedPayload {
 // ============================================================
 // PROJECTION MESSAGES
 // ============================================================
+
+/** Population row for projection input */
+export interface ProjectionPopulationRow {
+  readonly age: number;
+  readonly male: number;
+  readonly female: number;
+}
+
+/** Mortality row for projection input */
+export interface ProjectionMortalityRow {
+  readonly age: number;
+  readonly male: number;  // probability 0-1
+  readonly female: number;
+}
+
+/** Fertility row for projection input */
+export interface ProjectionFertilityRow {
+  readonly age: number;
+  readonly rate: number;  // births per woman per year
+}
+
+/** Migration row for projection input */
+export interface ProjectionMigrationRow {
+  readonly age: number;
+  readonly male: number;   // net migrants (can be negative)
+  readonly female: number;
+}
+
+/** Run projection request payload */
+export interface ProjectionRunRequest {
+  readonly workspaceId: string;
+  readonly baseYear: number;
+  readonly endYear: number;
+  readonly sexRatioAtBirth: number;  // males per 100 females
+  readonly population: ProjectionPopulationRow[];
+  readonly mortality: ProjectionMortalityRow[];
+  readonly fertility: ProjectionFertilityRow[];
+  readonly migration?: ProjectionMigrationRow[];  // optional
+}
+
+/** Single year result */
+export interface ProjectionYearResult {
+  readonly year: number;
+  readonly totalPopulation: number;
+  readonly births: number;
+  readonly deaths: number;
+  readonly netMigration: number;
+  readonly naturalChange: number;
+  readonly growthRate: number;
+}
+
+/** Run projection response payload */
+export interface ProjectionRunResponse {
+  readonly workspaceId: string;
+  readonly success: boolean;
+  readonly years: ProjectionYearResult[];
+  readonly error?: string;
+  readonly processingTimeMs: number;
+}
 
 /** Projection progress update */
 export interface ProjectionProgressPayload extends ProjectionProgress {}
