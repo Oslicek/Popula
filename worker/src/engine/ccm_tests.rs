@@ -120,6 +120,55 @@ mod fixtures {
             sex_ratio_at_birth: 100.0, // Equal for easy math
         }
     }
+
+    /// Zero migration (no migration) - default state
+    pub fn zero_migration(region: &str) -> MigrationTable {
+        MigrationTable {
+            region_id: region.to_string(),
+            year: 2024,
+            rates: vec![],
+        }
+    }
+
+    /// Simple immigration at age 25 (typical labor migration)
+    pub fn simple_immigration(region: &str) -> MigrationTable {
+        MigrationTable {
+            region_id: region.to_string(),
+            year: 2024,
+            rates: vec![
+                MigrationRate { age: 25, male: 50.0, female: 50.0 }, // 100 immigrants at age 25
+            ],
+        }
+    }
+
+    /// Simple emigration at age 25 (negative migration)
+    pub fn simple_emigration(region: &str) -> MigrationTable {
+        MigrationTable {
+            region_id: region.to_string(),
+            year: 2024,
+            rates: vec![
+                MigrationRate { age: 25, male: -30.0, female: -20.0 }, // 50 emigrants at age 25
+            ],
+        }
+    }
+
+    /// Labor migration profile (peak at 20-35)
+    pub fn labor_migration_profile(region: &str, scale: f64) -> MigrationTable {
+        MigrationTable {
+            region_id: region.to_string(),
+            year: 2024,
+            rates: (0..=120).map(|age| {
+                // Bell curve centered at 27
+                let rate = if age >= 18 && age <= 45 {
+                    let x = (age as f64 - 27.0) / 8.0;
+                    scale * (-x * x / 2.0).exp()
+                } else {
+                    0.0
+                };
+                MigrationRate { age, male: rate, female: rate * 0.8 } // Slightly fewer female migrants
+            }).collect(),
+        }
+    }
 }
 
 // ============================================================
@@ -485,6 +534,227 @@ mod edge_cases {
 
         // Then: Should default to 100% mortality (everyone dies)
         assert!((result.deaths - 100.0).abs() < 0.01);
+    }
+}
+
+// ============================================================
+// MIGRATION TESTS
+// ============================================================
+
+mod migration_tests {
+    use super::*;
+    use super::fixtures::*;
+
+    #[test]
+    fn test_immigration_adds_population() {
+        // Given: Small population with immigration
+        let mut ccm = CohortComponentModel::new();
+        ccm.load_population(&[
+            Cohort { age: 25, gender: Gender::Male, region_id: "TEST".to_string(), count: 100.0 },
+            Cohort { age: 25, gender: Gender::Female, region_id: "TEST".to_string(), count: 100.0 },
+        ]);
+        ccm.load_mortality_table(zero_mortality("TEST"));
+        ccm.load_fertility_table(zero_fertility("TEST"));
+        ccm.load_migration_table(simple_immigration("TEST")); // +100 at age 25
+
+        let initial_pop = ccm.total_population(); // 200
+
+        // When: Project one year
+        let result = ccm.project_one_year(2024, &["TEST".to_string()]);
+
+        // Then: Net migration should be 100, population should increase
+        assert!((result.net_migration - 100.0).abs() < 0.01, 
+            "Expected 100 net migration, got {}", result.net_migration);
+        
+        // After aging: 200 people move from 25 to 26, plus 100 immigrants at age 25
+        // Immigrants are added at current age before aging
+        let final_pop = ccm.total_population();
+        assert!((final_pop - initial_pop - 100.0).abs() < 0.01,
+            "Expected population to increase by 100, was {} now {}", initial_pop, final_pop);
+    }
+
+    #[test]
+    fn test_emigration_reduces_population() {
+        // Given: Population with emigration
+        let mut ccm = CohortComponentModel::new();
+        ccm.load_population(&[
+            Cohort { age: 25, gender: Gender::Male, region_id: "TEST".to_string(), count: 100.0 },
+            Cohort { age: 25, gender: Gender::Female, region_id: "TEST".to_string(), count: 100.0 },
+        ]);
+        ccm.load_mortality_table(zero_mortality("TEST"));
+        ccm.load_fertility_table(zero_fertility("TEST"));
+        ccm.load_migration_table(simple_emigration("TEST")); // -50 at age 25
+
+        let initial_pop = ccm.total_population(); // 200
+
+        // When: Project one year
+        let result = ccm.project_one_year(2024, &["TEST".to_string()]);
+
+        // Then: Net migration should be -50, population should decrease
+        assert!((result.net_migration - (-50.0)).abs() < 0.01,
+            "Expected -50 net migration, got {}", result.net_migration);
+        
+        let final_pop = ccm.total_population();
+        assert!((final_pop - initial_pop - (-50.0)).abs() < 0.01,
+            "Expected population to decrease by 50");
+    }
+
+    #[test]
+    fn test_emigration_cannot_exceed_population() {
+        // Given: Small population with large emigration
+        let mut ccm = CohortComponentModel::new();
+        ccm.load_population(&[
+            Cohort { age: 25, gender: Gender::Male, region_id: "TEST".to_string(), count: 10.0 },
+        ]);
+        ccm.load_mortality_table(zero_mortality("TEST"));
+        ccm.load_fertility_table(zero_fertility("TEST"));
+        
+        // Emigration of 100 males, but only 10 exist
+        let migration = MigrationTable {
+            region_id: "TEST".to_string(),
+            year: 2024,
+            rates: vec![MigrationRate { age: 25, male: -100.0, female: 0.0 }],
+        };
+        ccm.load_migration_table(migration);
+
+        // When: Project one year
+        ccm.project_one_year(2024, &["TEST".to_string()]);
+
+        // Then: Population should be 0, not negative
+        assert!(ccm.total_population() >= 0.0);
+        // All 10 emigrated (capped at available population)
+        assert_eq!(ccm.get_count(26, Gender::Male, "TEST"), 0.0);
+    }
+
+    #[test]
+    fn test_migration_affects_specific_ages() {
+        // Given: Population at multiple ages, migration only at age 25
+        let mut ccm = CohortComponentModel::new();
+        ccm.load_population(&[
+            Cohort { age: 20, gender: Gender::Male, region_id: "TEST".to_string(), count: 100.0 },
+            Cohort { age: 25, gender: Gender::Male, region_id: "TEST".to_string(), count: 100.0 },
+            Cohort { age: 30, gender: Gender::Male, region_id: "TEST".to_string(), count: 100.0 },
+        ]);
+        ccm.load_mortality_table(zero_mortality("TEST"));
+        ccm.load_fertility_table(zero_fertility("TEST"));
+        ccm.load_migration_table(simple_immigration("TEST")); // +50 males at age 25
+
+        // When: Project one year
+        ccm.project_one_year(2024, &["TEST".to_string()]);
+
+        // Then: Only age 26 (was 25) should have extra people
+        assert_eq!(ccm.get_count(21, Gender::Male, "TEST"), 100.0); // Unchanged
+        assert_eq!(ccm.get_count(31, Gender::Male, "TEST"), 100.0); // Unchanged
+        // Age 26: original 100 + 50 immigrants = 150
+        assert!((ccm.get_count(26, Gender::Male, "TEST") - 150.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_zero_migration_has_no_effect() {
+        // Given: Population with zero migration
+        let mut ccm = CohortComponentModel::new();
+        ccm.load_population(&minimal_population("TEST"));
+        ccm.load_mortality_table(zero_mortality("TEST"));
+        ccm.load_fertility_table(zero_fertility("TEST"));
+        ccm.load_migration_table(zero_migration("TEST"));
+
+        let initial_pop = ccm.total_population();
+
+        // When: Project one year
+        let result = ccm.project_one_year(2024, &["TEST".to_string()]);
+
+        // Then: No migration, population unchanged (just aged)
+        assert_eq!(result.net_migration, 0.0);
+        assert!((ccm.total_population() - initial_pop).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_male_female_different_migration() {
+        // Given: Different migration rates by gender
+        let mut ccm = CohortComponentModel::new();
+        ccm.load_population(&[
+            Cohort { age: 25, gender: Gender::Male, region_id: "TEST".to_string(), count: 100.0 },
+            Cohort { age: 25, gender: Gender::Female, region_id: "TEST".to_string(), count: 100.0 },
+        ]);
+        ccm.load_mortality_table(zero_mortality("TEST"));
+        ccm.load_fertility_table(zero_fertility("TEST"));
+        
+        // More male immigrants than female
+        let migration = MigrationTable {
+            region_id: "TEST".to_string(),
+            year: 2024,
+            rates: vec![MigrationRate { age: 25, male: 30.0, female: 10.0 }],
+        };
+        ccm.load_migration_table(migration);
+
+        // When: Project one year
+        let result = ccm.project_one_year(2024, &["TEST".to_string()]);
+
+        // Then: Different counts by gender
+        assert!((result.net_migration - 40.0).abs() < 0.01); // 30 + 10
+        assert!((ccm.get_count(26, Gender::Male, "TEST") - 130.0).abs() < 0.01);   // 100 + 30
+        assert!((ccm.get_count(26, Gender::Female, "TEST") - 110.0).abs() < 0.01); // 100 + 10
+    }
+
+    #[test]
+    fn test_migration_with_mortality_interaction() {
+        // Given: Population with both mortality and immigration
+        let mut ccm = CohortComponentModel::new();
+        ccm.load_population(&[
+            Cohort { age: 25, gender: Gender::Male, region_id: "TEST".to_string(), count: 100.0 },
+        ]);
+        
+        // 10% mortality
+        let mortality = MortalityTable {
+            region_id: "TEST".to_string(),
+            year: 2024,
+            rates: vec![MortalityRate { age: 25, male: 0.1, female: 0.1 }],
+        };
+        ccm.load_mortality_table(mortality);
+        ccm.load_fertility_table(zero_fertility("TEST"));
+        
+        // 50 immigrants
+        let migration = MigrationTable {
+            region_id: "TEST".to_string(),
+            year: 2024,
+            rates: vec![MigrationRate { age: 25, male: 50.0, female: 0.0 }],
+        };
+        ccm.load_migration_table(migration);
+
+        // When: Project one year
+        let result = ccm.project_one_year(2024, &["TEST".to_string()]);
+
+        // Then: 
+        // Migration first: 100 + 50 = 150 at age 25
+        // Deaths: 150 * 0.1 = 15 (mortality applies to post-migration population)
+        // Survivors: 150 - 15 = 135 at age 26
+        assert!((result.deaths - 15.0).abs() < 0.01, "Expected 15 deaths, got {}", result.deaths);
+        assert!((result.net_migration - 50.0).abs() < 0.01);
+        assert!((ccm.get_count(26, Gender::Male, "TEST") - 135.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_labor_migration_profile() {
+        // Given: Empty population with labor migration
+        let mut ccm = CohortComponentModel::new();
+        ccm.load_population(&[]); // No initial population
+        ccm.load_mortality_table(zero_mortality("TEST"));
+        ccm.load_fertility_table(zero_fertility("TEST"));
+        ccm.load_migration_table(labor_migration_profile("TEST", 100.0)); // Peak ~100 at age 27
+
+        // When: Project one year
+        let result = ccm.project_one_year(2024, &["TEST".to_string()]);
+
+        // Then: Should have migration concentrated at working ages
+        assert!(result.net_migration > 0.0);
+        
+        // Peak should be around age 27-28 (after aging)
+        let peak_age_count = ccm.get_count(28, Gender::Male, "TEST");
+        let young_count = ccm.get_count(19, Gender::Male, "TEST");
+        let old_count = ccm.get_count(50, Gender::Male, "TEST");
+        
+        assert!(peak_age_count > young_count, "Peak should be higher than young ages");
+        assert!(peak_age_count > old_count, "Peak should be higher than old ages");
     }
 }
 

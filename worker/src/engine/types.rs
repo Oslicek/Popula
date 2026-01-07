@@ -152,6 +152,38 @@ impl FertilityTable {
     }
 }
 
+/// Net migration by age and gender
+/// Positive = immigration, Negative = emigration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MigrationRate {
+    pub age: u32,
+    pub male: f64,   // Net migrants (can be negative)
+    pub female: f64, // Net migrants (can be negative)
+}
+
+/// Migration table for a region and year
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MigrationTable {
+    pub region_id: String,
+    pub year: u32,
+    pub rates: Vec<MigrationRate>,
+}
+
+impl MigrationTable {
+    /// Get net migration for a specific age and gender
+    /// Returns 0 if no rate defined for that age
+    pub fn get_rate(&self, age: u32, gender: Gender) -> f64 {
+        self.rates.iter()
+            .find(|r| r.age == age)
+            .map(|r| match gender {
+                Gender::Male => r.male,
+                Gender::Female => r.female,
+            })
+            .unwrap_or(0.0)
+    }
+}
+
 /// Shock type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]

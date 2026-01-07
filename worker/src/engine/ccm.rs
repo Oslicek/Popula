@@ -6,10 +6,10 @@
 //! ## Algorithm
 //!
 //! For each year t → t+1:
-//! 1. **Mortality**: Apply survival rates to reduce cohort sizes
-//! 2. **Aging**: Move survivors up one year of age
-//! 3. **Fertility**: Calculate births from women of reproductive age (15-49)
-//! 4. **Migration**: Add/subtract net migrants (TODO)
+//! 1. **Fertility**: Calculate births from women of reproductive age (15-49)
+//! 2. **Migration**: Add/subtract net migrants by age/gender
+//! 3. **Mortality**: Apply survival rates to reduce cohort sizes
+//! 4. **Aging**: Move survivors up one year of age
 
 use std::collections::HashMap;
 
@@ -59,6 +59,9 @@ pub struct CohortComponentModel {
     
     /// Fertility tables by region
     fertility_tables: HashMap<String, FertilityTable>,
+    
+    /// Migration tables by region
+    migration_tables: HashMap<String, MigrationTable>,
 }
 
 impl CohortComponentModel {
@@ -68,6 +71,7 @@ impl CohortComponentModel {
             population: HashMap::new(),
             mortality_tables: HashMap::new(),
             fertility_tables: HashMap::new(),
+            migration_tables: HashMap::new(),
         }
     }
 
@@ -88,6 +92,11 @@ impl CohortComponentModel {
     /// Load a fertility table for a region
     pub fn load_fertility_table(&mut self, table: FertilityTable) {
         self.fertility_tables.insert(table.region_id.clone(), table);
+    }
+
+    /// Load a migration table for a region
+    pub fn load_migration_table(&mut self, table: MigrationTable) {
+        self.migration_tables.insert(table.region_id.clone(), table);
     }
 
     /// Get population count for a specific cohort
@@ -125,21 +134,32 @@ impl CohortComponentModel {
             .unwrap_or(105.0)
     }
 
+    /// Get net migration for a cohort, defaulting to 0
+    fn get_migration_rate(&self, age: u32, gender: Gender, region_id: &str) -> f64 {
+        self.migration_tables
+            .get(region_id)
+            .map(|table| table.get_rate(age, gender))
+            .unwrap_or(0.0)
+    }
+
     /// Project population for one year using CCM
     ///
     /// Steps:
-    /// 1. Calculate births from fertile women
-    /// 2. Apply mortality and age the population
-    /// 3. Add newborns at age 0
-    /// 4. Return year summary
+    /// 1. Calculate births from fertile women (before any changes)
+    /// 2. Apply migration (add immigrants, remove emigrants)
+    /// 3. Apply mortality to post-migration population
+    /// 4. Age survivors up one year
+    /// 5. Add newborns at age 0
+    /// 6. Return year summary
     pub fn project_one_year(&mut self, year: u32, regions: &[String]) -> ProjectionYear {
         let initial_population = self.total_population();
         let mut total_births = 0.0;
         let mut total_deaths = 0.0;
+        let mut total_migration = 0.0;
         let mut new_population: HashMap<String, f64> = HashMap::new();
 
         for region_id in regions {
-            // Step 1: Calculate births from fertile women (before they age/die)
+            // Step 1: Calculate births from fertile women (before they age/die/migrate)
             let (births, male_births, female_births) = self.calculate_births(region_id);
             total_births += births;
 
@@ -153,17 +173,33 @@ impl CohortComponentModel {
                 *new_population.entry(key).or_insert(0.0) += female_births;
             }
 
-            // Step 2: Process each cohort - apply mortality and aging
+            // Step 2 & 3 & 4: Process each cohort - migration, mortality, aging
             for age in 0..=MAX_AGE {
                 for gender in [Gender::Male, Gender::Female] {
                     let key = cohort_key(age, gender, region_id);
-                    let count = self.population.get(&key).copied().unwrap_or(0.0);
+                    let mut count = self.population.get(&key).copied().unwrap_or(0.0);
+                    
+                    // Step 2: Apply migration
+                    let migration = self.get_migration_rate(age, gender, region_id);
+                    
+                    if migration != 0.0 {
+                        if migration > 0.0 {
+                            // Immigration: add migrants
+                            count += migration;
+                            total_migration += migration;
+                        } else {
+                            // Emigration: remove migrants (but can't go negative)
+                            let emigrants = (-migration).min(count);
+                            count -= emigrants;
+                            total_migration -= emigrants;
+                        }
+                    }
                     
                     if count <= 0.0 {
                         continue;
                     }
 
-                    // Apply mortality
+                    // Step 3: Apply mortality
                     let mortality_rate = self.get_mortality_rate(age, gender, region_id);
                     // Clamp mortality rate to [0, 1]
                     let mortality_rate = mortality_rate.clamp(0.0, 1.0);
@@ -172,7 +208,7 @@ impl CohortComponentModel {
                     let survivors = count - deaths;
                     total_deaths += deaths;
 
-                    // Age survivors (or keep at MAX_AGE for open-ended interval)
+                    // Step 4: Age survivors (or keep at MAX_AGE for open-ended interval)
                     if survivors > 0.0 {
                         let new_age = if age >= MAX_AGE { MAX_AGE } else { age + 1 };
                         let new_key = cohort_key(new_age, gender, region_id);
@@ -190,6 +226,8 @@ impl CohortComponentModel {
         let natural_change = total_births - total_deaths;
         let growth_rate = if initial_population > 0.0 {
             ((final_population - initial_population) / initial_population) * 100.0
+        } else if final_population > 0.0 {
+            100.0 // Started from 0, now have population
         } else {
             0.0
         };
@@ -199,7 +237,7 @@ impl CohortComponentModel {
             total_population: final_population,
             births: total_births,
             deaths: total_deaths,
-            net_migration: 0.0, // TODO: Implement migration
+            net_migration: total_migration,
             natural_change,
             growth_rate,
         }
