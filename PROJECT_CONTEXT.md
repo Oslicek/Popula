@@ -1,6 +1,6 @@
 # Project Context
 
-> **Last Updated:** 2026-01-07 (v0.3.0)
+> **Last Updated:** 2026-01-07 (v0.3.1)
 
 ## Overview
 
@@ -289,6 +289,10 @@ Popula/
   - "Export All Reports" button (ZIP archive)
   - JSZip library for client-side ZIP generation
   - Floating-point precision handling
+- [x] **Geographic overlay**
+  - MapLibre OSM basemap with toggle
+  - deck.gl regions overlay (UK local authorities)
+  - On-the-fly reprojection from BNG (EPSG:27700) to WGS84
 
 **Test Coverage:**
 - TypeScript: 96 tests passing (shared-types + web)

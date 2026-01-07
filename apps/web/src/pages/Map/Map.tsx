@@ -4,27 +4,17 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import { GeoJsonLayer } from '@deck.gl/layers';
 import type { Feature, Geometry } from 'geojson';
+import { reprojectFeatureCollection27700ToWgs84 } from './reprojection';
+import type { RegionProperties } from './types';
 import styles from './Map.module.css';
 
 // UK Local Authority GeoJSON path
 const UK_REGIONS_URL = '/sample-data/uk-local-authorities.geojson';
 
-// Color scale for regions (semi-transparent)
-const REGION_FILL_COLOR: [number, number, number, number] = [64, 156, 255, 100];
-const REGION_LINE_COLOR: [number, number, number, number] = [255, 255, 255, 200];
-const REGION_HOVER_COLOR: [number, number, number, number] = [255, 180, 64, 180];
-
-interface RegionProperties {
-  LAD23CD?: string;
-  LAD23NM?: string;
-  LAD23NMW?: string;
-  BNG_E?: number;
-  BNG_N?: number;
-  LONG?: number;
-  LAT?: number;
-  GlobalID?: string;
-  [key: string]: unknown;
-}
+// Color scale for regions (pronounced)
+const REGION_FILL_COLOR: [number, number, number, number] = [255, 64, 128, 160]; // bright magenta, semi-opaque
+const REGION_LINE_COLOR: [number, number, number, number] = [255, 255, 255, 255]; // white outline
+const REGION_HOVER_COLOR: [number, number, number, number] = [255, 214, 64, 220]; // gold on hover
 
 export function Map() {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -33,6 +23,9 @@ export function Map() {
   const [lng, setLng] = useState(-2.5); // UK center longitude
   const [lat, setLat] = useState(54.5); // UK center latitude
   const [zoom, setZoom] = useState(5.5);
+  const [basemapVisible, setBasemapVisible] = useState(true);
+  const [overlayVisible, setOverlayVisible] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
   const [regionsData, setRegionsData] = useState<Feature<Geometry, RegionProperties>[] | null>(null);
   const [regionsLoading, setRegionsLoading] = useState(true);
@@ -46,9 +39,10 @@ export function Map() {
         return response.json();
       })
       .then(data => {
-        setRegionsData(data.features);
+        const converted = reprojectFeatureCollection27700ToWgs84(data);
+        setRegionsData(converted.features);
         setRegionsLoading(false);
-        console.log(`[Map] Loaded ${data.features.length} regions`);
+        console.log(`[Map] Loaded ${data.features.length} regions (reprojected to WGS84)`);
       })
       .catch(error => {
         console.error('[Map] Failed to load regions:', error);
@@ -59,7 +53,7 @@ export function Map() {
 
   // Create deck.gl layers
   const getLayers = useCallback(() => {
-    if (!regionsData) return [];
+    if (!regionsData || !overlayVisible) return [];
 
     return [
       new GeoJsonLayer<RegionProperties>({
@@ -69,13 +63,15 @@ export function Map() {
         stroked: true,
         filled: true,
         extruded: false,
-        lineWidthMinPixels: 1,
+        opacity: 0.85,
+        lineWidthUnits: 'pixels',
+        lineWidthMinPixels: 2.5,
         getFillColor: (d: Feature<Geometry, RegionProperties>) => {
           const name = d.properties?.LAD23NM || '';
           return name === hoveredRegion ? REGION_HOVER_COLOR : REGION_FILL_COLOR;
         },
         getLineColor: REGION_LINE_COLOR,
-        getLineWidth: 1,
+        getLineWidth: 2,
         onHover: (info) => {
           if (info.object) {
             const props = (info.object as Feature<Geometry, RegionProperties>).properties;
@@ -89,7 +85,7 @@ export function Map() {
         }
       })
     ];
-  }, [regionsData, hoveredRegion]);
+  }, [regionsData, hoveredRegion, overlayVisible]);
 
   // Initialize map
   useEffect(() => {
@@ -121,6 +117,10 @@ export function Map() {
       },
       center: [lng, lat],
       zoom: zoom
+    });
+
+    map.current.on('load', () => {
+      setMapReady(true);
     });
 
     // Initialize deck.gl overlay
@@ -191,6 +191,29 @@ export function Map() {
     }
   }, [getLayers]);
 
+  // Toggle basemap visibility
+  useEffect(() => {
+    if (!map.current) return;
+    const applyVisibility = () => {
+      try {
+        map.current?.setLayoutProperty('osm-tiles-layer', 'visibility', basemapVisible ? 'visible' : 'none');
+      } catch (err) {
+        // If style isn't ready yet, wait for load
+        if (map.current) {
+          map.current.once('load', () => {
+            map.current?.setLayoutProperty('osm-tiles-layer', 'visibility', basemapVisible ? 'visible' : 'none');
+          });
+        }
+      }
+    };
+
+    if (mapReady && map.current.isStyleLoaded()) {
+      applyVisibility();
+    } else if (map.current) {
+      map.current.once('load', applyVisibility);
+    }
+  }, [basemapVisible, mapReady]);
+
   return (
     <div className={styles.mapPage}>
       <div className={styles.header}>
@@ -223,6 +246,25 @@ export function Map() {
             <strong>Regions:</strong> {regionsData.length}
           </span>
         )}
+      </div>
+
+      <div className={styles.infoBar} style={{ marginTop: 'var(--space-2)' }}>
+        <label className={styles.coord}>
+          <input
+            type="checkbox"
+            checked={basemapVisible}
+            onChange={(e) => setBasemapVisible(e.target.checked)}
+          />
+          <span><strong>Basemap</strong> (OSM tiles)</span>
+        </label>
+        <label className={styles.coord}>
+          <input
+            type="checkbox"
+            checked={overlayVisible}
+            onChange={(e) => setOverlayVisible(e.target.checked)}
+          />
+          <span><strong>Regions overlay</strong> (deck.gl)</span>
+        </label>
       </div>
       
       {hoveredRegion && (
