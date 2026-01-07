@@ -1,0 +1,151 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Hero Section */
+.hero {
+  text-align: center;
+  padding: var(--space-12) 0;
+}
+
+.title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.titleAccent {
+  font-size: 4rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.03em;
+}
+
+.titleSub {
+  font-size: var(--text-xl);
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  font-size: var(--text-lg);
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Feature Cards */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-6);
+  margin: var(--space-12) 0;
+}
+
+.card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-bg-tertiary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  text-align: center;
+  transition: all var(--transition-base);
+}
+
+.card:hover {
+  border-color: var(--color-accent-primary);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.cardIcon {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+}
+
+.cardTitle {
+  font-size: var(--text-xl);
+  margin-bottom: var(--space-3);
+  color: var(--color-text-primary);
+}
+
+.cardText {
+  color: var(--color-text-secondary);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Status Section */
+.status {
+  margin: var(--space-12) 0;
+}
+
+.statusCard {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-bg-tertiary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+
+.statusCard h3 {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-lg);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.statusGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.statusItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.statusLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.statusValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.statusValue.connected {
+  color: var(--color-success);
+}
+
+.statusValue.connecting {
+  color: var(--color-warning);
+}
+
+.statusValue.error {
+  color: var(--color-error);
+}
+
+.statusValue.disconnected {
+  color: var(--color-text-muted);
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-4);
+  margin: var(--space-8) 0;
+}

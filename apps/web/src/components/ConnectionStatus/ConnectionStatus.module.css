@@ -1,0 +1,46 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  transition: background-color var(--transition-base);
+}
+
+.disconnected {
+  background-color: var(--color-text-muted);
+}
+
+.connecting {
+  background-color: var(--color-warning);
+  animation: blink 1s ease-in-out infinite;
+}
+
+.connected {
+  background-color: var(--color-success);
+  box-shadow: 0 0 6px var(--color-success);
+}
+
+.error {
+  background-color: var(--color-error);
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.label {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.errorText {
+  font-size: var(--text-xs);
+  color: var(--color-error);
+  margin-left: var(--space-2);
+}
