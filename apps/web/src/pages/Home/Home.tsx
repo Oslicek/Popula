@@ -139,6 +139,74 @@ export function Home() {
         </div>
       </section>
       
+      {/* Sample Data Section */}
+      <section className={styles.sampleData}>
+        <div className={styles.sampleDataCard}>
+          <div className={styles.sampleDataHeader}>
+            <div className={styles.sampleDataIcon}>🌍</div>
+            <div>
+              <h3>Sample Dataset: Republic of Humania</h3>
+              <p className={styles.sampleDataSubtitle}>
+                A fictional country with ~10 million people. Perfect for testing projections.
+              </p>
+            </div>
+          </div>
+          
+          <div className={styles.sampleDataStats}>
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>10,247,893</span>
+              <span className={styles.statLabel}>Population</span>
+            </div>
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>41.2</span>
+              <span className={styles.statLabel}>Median Age</span>
+            </div>
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>1.67</span>
+              <span className={styles.statLabel}>Fertility Rate</span>
+            </div>
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>79.3</span>
+              <span className={styles.statLabel}>Life Expectancy</span>
+            </div>
+          </div>
+
+          <div className={styles.downloadSection}>
+            <h4>Download Sample Files</h4>
+            <p className={styles.downloadHint}>
+              Use these CSV files to test the projection engine or as templates for your own data.
+            </p>
+            <div className={styles.downloadGrid}>
+              <a href="/sample-data/population.csv" download className={styles.downloadItem}>
+                <span className={styles.downloadIcon}>👥</span>
+                <span className={styles.downloadName}>population.csv</span>
+                <span className={styles.downloadDesc}>Age-sex distribution</span>
+              </a>
+              <a href="/sample-data/mortality.csv" download className={styles.downloadItem}>
+                <span className={styles.downloadIcon}>📉</span>
+                <span className={styles.downloadName}>mortality.csv</span>
+                <span className={styles.downloadDesc}>Death probabilities by age</span>
+              </a>
+              <a href="/sample-data/fertility.csv" download className={styles.downloadItem}>
+                <span className={styles.downloadIcon}>👶</span>
+                <span className={styles.downloadName}>fertility.csv</span>
+                <span className={styles.downloadDesc}>Birth rates by age</span>
+              </a>
+              <a href="/sample-data/migration.csv" download className={styles.downloadItem}>
+                <span className={styles.downloadIcon}>✈️</span>
+                <span className={styles.downloadName}>migration.csv</span>
+                <span className={styles.downloadDesc}>Net migration by age</span>
+              </a>
+              <a href="/sample-data/humania.json" download className={styles.downloadItem}>
+                <span className={styles.downloadIcon}>⚙️</span>
+                <span className={styles.downloadName}>humania.json</span>
+                <span className={styles.downloadDesc}>Census metadata</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+      
       <section className={styles.actions}>
         <button className="btn btn-primary" disabled={status !== 'connected'}>
           Create New Scenario

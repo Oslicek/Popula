@@ -1,0 +1,93 @@
+{
+  "country": {
+    "name": "Republic of Humania",
+    "code": "HUM",
+    "capital": "New Harmonia",
+    "continent": "Europa",
+    "currency": "Humanian Crown (HMC)"
+  },
+  "census": {
+    "name": "Population and Housing Census 2024",
+    "referenceDate": "2024-01-01",
+    "collectionPeriod": {
+      "start": "2024-03-01",
+      "end": "2024-03-31"
+    },
+    "agency": "Humania Statistical Office",
+    "methodology": "Full enumeration with online self-response option"
+  },
+  "summary": {
+    "totalPopulation": 10247893,
+    "malePopulation": 4987234,
+    "femalePopulation": 5260659,
+    "sexRatio": 94.8,
+    "medianAge": 41.2,
+    "lifeExpectancy": {
+      "male": 76.4,
+      "female": 82.1,
+      "total": 79.3
+    },
+    "totalFertilityRate": 1.67,
+    "netMigrationRate": 4.2,
+    "naturalGrowthRate": -0.8,
+    "populationGrowthRate": 3.4
+  },
+  "ageStructure": {
+    "children_0_14": {
+      "count": 1523456,
+      "percentage": 14.9
+    },
+    "workingAge_15_64": {
+      "count": 6789234,
+      "percentage": 66.2
+    },
+    "elderly_65_plus": {
+      "count": 1935203,
+      "percentage": 18.9
+    },
+    "dependencyRatio": 50.9,
+    "agingIndex": 127.0
+  },
+  "regions": [
+    {
+      "code": "HUM",
+      "name": "Humania (National)",
+      "population": 10247893
+    }
+  ],
+  "dataFiles": {
+    "population": "population.csv",
+    "mortality": "mortality.csv",
+    "fertility": "fertility.csv",
+    "migration": "migration.csv"
+  },
+  "projectionDefaults": {
+    "baseYear": 2024,
+    "targetYear": 2050,
+    "sexRatioAtBirth": 105.2,
+    "scenarios": [
+      {
+        "name": "Baseline",
+        "description": "Current trends continue unchanged"
+      },
+      {
+        "name": "High fertility",
+        "description": "TFR increases to 2.1 by 2040"
+      },
+      {
+        "name": "Low migration",
+        "description": "Net migration decreases by 50%"
+      }
+    ]
+  },
+  "notes": [
+    "All mortality rates are probabilities of dying within the year (qx)",
+    "Fertility rates are age-specific fertility rates (births per woman)",
+    "Migration figures are net annual migrants (positive = immigration)",
+    "Population counts are as of January 1, 2024"
+  ],
+  "version": "1.0",
+  "createdAt": "2024-06-15T10:30:00Z",
+  "lastUpdated": "2024-06-15T10:30:00Z"
+}
+
