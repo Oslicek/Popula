@@ -103,6 +103,45 @@ describe('CSV Export Utilities', () => {
       expect(result).toContain('2024,10000000,100000,90000,5000');
       expect(result).toContain('2025,10015000,101000,91000,5000');
     });
+
+    it('handles empty data array', () => {
+      const result = exportYearlyChangeCSV([]);
+      
+      expect(result).toBe('Year,Population,Births,Deaths,Net Migration');
+    });
+
+    it('handles single year', () => {
+      const data = [{ year: 2024, population: 5000000, births: 50000, deaths: 45000, migration: 1000 }];
+      
+      const result = exportYearlyChangeCSV(data);
+      
+      expect(result).toBe('Year,Population,Births,Deaths,Net Migration\n2024,5000000,50000,45000,1000');
+    });
+
+    it('handles negative migration (emigration)', () => {
+      const data = [{ year: 2024, population: 10000000, births: 100000, deaths: 90000, migration: -50000 }];
+      
+      const result = exportYearlyChangeCSV(data);
+      
+      expect(result).toContain('-50000');
+    });
+
+    it('handles very large populations', () => {
+      const data = [{ year: 2024, population: 1400000000, births: 17000000, deaths: 10000000, migration: 0 }];
+      
+      const result = exportYearlyChangeCSV(data);
+      
+      expect(result).toContain('1400000000');
+      expect(result).toContain('17000000');
+    });
+
+    it('handles zero values', () => {
+      const data = [{ year: 2024, population: 0, births: 0, deaths: 0, migration: 0 }];
+      
+      const result = exportYearlyChangeCSV(data);
+      
+      expect(result).toContain('2024,0,0,0,0');
+    });
   });
 
   describe('exportPopulationPyramidCSV', () => {
@@ -121,6 +160,78 @@ describe('CSV Export Utilities', () => {
       expect(result).toContain('0,50000,48000,98000');
       expect(result).toContain('1,49000,47000,96000');
     });
+
+    it('handles empty cohorts array', () => {
+      const data = { year: 2024, cohorts: [] };
+      
+      const result = exportPopulationPyramidCSV(data);
+      
+      expect(result).toBe('Age,Male,Female,Total');
+    });
+
+    it('calculates total correctly for each cohort', () => {
+      const data = {
+        year: 2024,
+        cohorts: [
+          { age: 25, male: 123456, female: 654321 },
+        ],
+      };
+      
+      const result = exportPopulationPyramidCSV(data);
+      
+      // 123456 + 654321 = 777777
+      expect(result).toContain('25,123456,654321,777777');
+    });
+
+    it('handles full age range (0-100+)', () => {
+      const cohorts = Array.from({ length: 101 }, (_, age) => ({
+        age,
+        male: 1000 - age * 5,
+        female: 1000 - age * 4,
+      }));
+      const data = { year: 2024, cohorts };
+      
+      const result = exportPopulationPyramidCSV(data);
+      const lines = result.split('\n');
+      
+      // Header + 101 ages (0-100)
+      expect(lines.length).toBe(102);
+      expect(result).toContain('0,1000,1000,2000');
+      expect(result).toContain('100,500,600,1100');
+    });
+
+    it('handles zero population in age groups', () => {
+      const data = {
+        year: 2024,
+        cohorts: [
+          { age: 0, male: 100, female: 100 },
+          { age: 100, male: 0, female: 0 },
+        ],
+      };
+      
+      const result = exportPopulationPyramidCSV(data);
+      
+      expect(result).toContain('100,0,0,0');
+    });
+
+    it('maintains age order from input', () => {
+      const data = {
+        year: 2024,
+        cohorts: [
+          { age: 5, male: 500, female: 500 },
+          { age: 0, male: 1000, female: 1000 },
+          { age: 10, male: 400, female: 400 },
+        ],
+      };
+      
+      const result = exportPopulationPyramidCSV(data);
+      const lines = result.split('\n');
+      
+      // Order should match input (5, 0, 10)
+      expect(lines[1]).toContain('5,500,500,1000');
+      expect(lines[2]).toContain('0,1000,1000,2000');
+      expect(lines[3]).toContain('10,400,400,800');
+    });
   });
 
   describe('exportAgeGroupsCSV', () => {
@@ -134,6 +245,74 @@ describe('CSV Export Utilities', () => {
       
       expect(result).toContain('Age Group,Male,Female,Total,Percentage');
       expect(result).toContain('Children (0-14),1000000,950000,1950000,19.5');
+    });
+
+    it('handles empty data array', () => {
+      const result = exportAgeGroupsCSV([], 2024);
+      
+      expect(result).toBe('Age Group,Male,Female,Total,Percentage');
+    });
+
+    it('exports all six standard age groups', () => {
+      const data = [
+        { label: 'Children (0-14)', male: 1000000, female: 950000, total: 1950000, percentage: 19.5 },
+        { label: 'Youth (15-24)', male: 800000, female: 780000, total: 1580000, percentage: 15.8 },
+        { label: 'Young Adults (25-44)', male: 1500000, female: 1550000, total: 3050000, percentage: 30.5 },
+        { label: 'Middle Adults (45-64)', male: 1200000, female: 1300000, total: 2500000, percentage: 25.0 },
+        { label: 'Elderly (65-79)', male: 400000, female: 500000, total: 900000, percentage: 9.0 },
+        { label: 'Very Elderly (80+)', male: 50000, female: 70000, total: 120000, percentage: 1.2 },
+      ];
+      
+      const result = exportAgeGroupsCSV(data, 2024);
+      const lines = result.split('\n');
+      
+      // Header + 6 groups
+      expect(lines.length).toBe(7);
+      expect(result).toContain('Children (0-14)');
+      expect(result).toContain('Very Elderly (80+)');
+    });
+
+    it('rounds percentages to 2 decimal places', () => {
+      const data = [
+        { label: 'Test', male: 333333, female: 333334, total: 666667, percentage: 33.333333333 },
+      ];
+      
+      const result = exportAgeGroupsCSV(data, 2024);
+      
+      // Should be rounded to 33.33
+      expect(result).toContain('33.33');
+      expect(result).not.toContain('33.333');
+    });
+
+    it('handles labels with parentheses correctly', () => {
+      const data = [
+        { label: 'Children (0-14)', male: 100, female: 100, total: 200, percentage: 50.0 },
+      ];
+      
+      const result = exportAgeGroupsCSV(data, 2024);
+      
+      // Parentheses don't need escaping in CSV
+      expect(result).toContain('Children (0-14),100,100,200,50');
+    });
+
+    it('handles zero values in all fields', () => {
+      const data = [
+        { label: 'Empty Group', male: 0, female: 0, total: 0, percentage: 0 },
+      ];
+      
+      const result = exportAgeGroupsCSV(data, 2024);
+      
+      expect(result).toContain('Empty Group,0,0,0,0');
+    });
+
+    it('handles 100% in a single group', () => {
+      const data = [
+        { label: 'All Population', male: 5000000, female: 5000000, total: 10000000, percentage: 100.0 },
+      ];
+      
+      const result = exportAgeGroupsCSV(data, 2024);
+      
+      expect(result).toContain('100');
     });
   });
 
