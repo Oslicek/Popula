@@ -446,6 +446,32 @@
   transform: scale(0.98);
 }
 
+.exportAllButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-tertiary));
+  border: none;
+  border-radius: var(--radius-md);
+  color: white;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.exportAllButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.exportAllButton:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
 .positive {
   color: var(--color-success) !important;
 }

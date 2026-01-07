@@ -31,6 +31,7 @@ import {
   exportCohortTrackingCSV,
   exportMedianAgeCSV,
   exportLifeTableCSV,
+  exportAllReportsAsZip,
 } from '@/utils/csvExport';
 import styles from './Workspace.module.css';
 
@@ -681,6 +682,76 @@ export function Workspace() {
                   <option value="median-age-chart">📈 Median Age Chart</option>
                 )}
               </select>
+              
+              <button
+                className={styles.exportAllButton}
+                onClick={async () => {
+                  // Prepare all the data for export
+                  const yearlyChange = workspace.projection.results.map(r => ({
+                    year: r.year,
+                    population: r.totalPopulation,
+                    births: r.births,
+                    deaths: r.deaths,
+                    migration: r.netMigration,
+                  }));
+                  
+                  const populationByYear = workspace.projection.populationByYear?.map(yearData => ({
+                    year: yearData.year,
+                    cohorts: yearData.cohorts.map(c => ({
+                      age: c.age,
+                      male: c.male,
+                      female: c.female,
+                    })),
+                    total: yearData.cohorts.reduce((sum, c) => sum + c.male + c.female, 0),
+                  }));
+                  
+                  const ageGroups = workspace.projection.populationByYear?.map(yearData => ({
+                    year: yearData.year,
+                    groups: calculateAgeGroups(yearData.cohorts),
+                  }));
+                  
+                  const dependencyRatios = workspace.projection.populationByYear?.map(yearData => 
+                    calculateDependencyRatios(yearData.year, yearData.cohorts)
+                  );
+                  
+                  const sexRatios = workspace.projection.populationByYear?.map(yearData =>
+                    calculateSexRatios(yearData.year, yearData.cohorts, workspace.fertility?.rows)
+                  );
+                  
+                  const cohortTracking = workspace.projection.populationByYear && 
+                    workspace.projection.populationByYear.length > 0
+                    ? calculateCohortTracking(
+                        workspace.projection.populationByYear[0].year,
+                        workspace.projection.populationByYear
+                      )
+                    : undefined;
+                  
+                  const medianAge = workspace.projection.populationByYear?.map(yearData =>
+                    calculateMedianAgeProgression(yearData.year, yearData.cohorts)
+                  ).map((row, idx, arr) => ({
+                    ...row,
+                    change: idx > 0 ? row.medianAge - arr[idx - 1].medianAge : undefined,
+                  }));
+                  
+                  const lifeTable = workspace.mortality?.rows
+                    ? calculateLifeTable(workspace.mortality.rows)
+                    : undefined;
+                  
+                  await exportAllReportsAsZip({
+                    workspaceName: workspace.name,
+                    yearlyChange,
+                    populationByYear,
+                    ageGroups,
+                    dependencyRatios,
+                    sexRatios,
+                    cohortTracking,
+                    medianAge,
+                    lifeTable,
+                  });
+                }}
+              >
+                📦 Export All Reports (ZIP)
+              </button>
             </div>
           </div>
           

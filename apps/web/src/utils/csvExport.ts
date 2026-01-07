@@ -2,6 +2,8 @@
  * CSV Export Utilities for demographic result tables
  */
 
+import JSZip from 'jszip';
+
 /**
  * Rounds a number to a specified number of decimal places
  * Handles floating-point precision issues (e.g., 0.00011999999999999999 -> 0.00012)
@@ -294,3 +296,116 @@ export function exportLifeTableCSV(
   );
 }
 
+/**
+ * Export all reports as a ZIP file
+ */
+export interface AllReportsData {
+  workspaceName: string;
+  yearlyChange?: { year: number; population: number; births: number; deaths: number; migration: number }[];
+  populationByYear?: { year: number; cohorts: { age: number; male: number; female: number }[]; total: number }[];
+  ageGroups?: { year: number; groups: { label: string; male: number; female: number; total: number; percentage: number }[] }[];
+  dependencyRatios?: { year: number; youthPop: number; workingAgePop: number; elderlyPop: number; youthRatio: number; oldAgeRatio: number; totalRatio: number }[];
+  sexRatios?: { year: number; overallRatio: number; atBirthRatio: number; childrenRatio: number; workingAgeRatio: number; elderlyRatio: number; totalMale: number; totalFemale: number }[];
+  cohortTracking?: { birthYear: number; data: { year: number; age: number; population: number; male: number; female: number; survivalRate?: number; cumulativeSurvival?: number }[] };
+  medianAge?: { year: number; medianAge: number; medianAgeMale: number; medianAgeFemale: number; change?: number }[];
+  lifeTable?: { age: number; qx: number; lx: number; dx: number; Lx: number; Tx: number; ex: number }[];
+}
+
+/**
+ * Build the JSZip object with all reports (internal helper for testing)
+ */
+export function buildReportsZip(data: AllReportsData): JSZip {
+  const zip = new JSZip();
+  const folder = zip.folder(data.workspaceName) ?? zip;
+  
+  // 1. Year-over-Year Change
+  if (data.yearlyChange && data.yearlyChange.length > 0) {
+    folder.file('yearly-change.csv', exportYearlyChangeCSV(data.yearlyChange));
+  }
+  
+  // 2. Population Pyramids (one per year)
+  if (data.populationByYear && data.populationByYear.length > 0) {
+    const pyramidsFolder = folder.folder('population-pyramids');
+    for (const yearData of data.populationByYear) {
+      pyramidsFolder?.file(
+        `pyramid-${yearData.year}.csv`,
+        exportPopulationPyramidCSV({ year: yearData.year, cohorts: yearData.cohorts })
+      );
+    }
+  }
+  
+  // 3. Age Groups (one per year)
+  if (data.ageGroups && data.ageGroups.length > 0) {
+    const ageGroupsFolder = folder.folder('age-groups');
+    for (const yearData of data.ageGroups) {
+      ageGroupsFolder?.file(
+        `age-groups-${yearData.year}.csv`,
+        exportAgeGroupsCSV(yearData.groups, yearData.year)
+      );
+    }
+  }
+  
+  // 4. Dependency Ratios
+  if (data.dependencyRatios && data.dependencyRatios.length > 0) {
+    folder.file('dependency-ratios.csv', exportDependencyRatiosCSV(data.dependencyRatios));
+  }
+  
+  // 5. Sex Ratios
+  if (data.sexRatios && data.sexRatios.length > 0) {
+    folder.file('sex-ratios.csv', exportSexRatiosCSV(data.sexRatios));
+  }
+  
+  // 6. Cohort Tracking
+  if (data.cohortTracking && data.cohortTracking.data.length > 0) {
+    folder.file(
+      `cohort-tracking-born-${data.cohortTracking.birthYear}.csv`,
+      exportCohortTrackingCSV(data.cohortTracking.data, data.cohortTracking.birthYear)
+    );
+  }
+  
+  // 7. Median Age Progression
+  if (data.medianAge && data.medianAge.length > 0) {
+    folder.file('median-age.csv', exportMedianAgeCSV(data.medianAge));
+  }
+  
+  // 8. Life Table
+  if (data.lifeTable && data.lifeTable.length > 0) {
+    folder.file('life-table.csv', exportLifeTableCSV(data.lifeTable));
+  }
+  
+  return zip;
+}
+
+/**
+ * Generate a ZIP blob containing all reports (for browser use)
+ */
+export async function generateAllReportsZip(data: AllReportsData): Promise<Blob> {
+  const zip = buildReportsZip(data);
+  return await zip.generateAsync({ type: 'blob' });
+}
+
+/**
+ * Download a blob as a file
+ */
+export function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.style.display = 'none';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Export all reports as a ZIP file and download it
+ */
+export async function exportAllReportsAsZip(data: AllReportsData): Promise<void> {
+  const blob = await generateAllReportsZip(data);
+  downloadBlob(blob, `${data.workspaceName}-reports.zip`);
+}

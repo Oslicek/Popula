@@ -10,6 +10,8 @@ import {
   exportCohortTrackingCSV,
   exportMedianAgeCSV,
   exportLifeTableCSV,
+  buildReportsZip,
+  type AllReportsData,
 } from './csvExport';
 
 describe('CSV Export Utilities', () => {
@@ -478,6 +480,138 @@ describe('CSV Export Utilities', () => {
       // Should not contain long decimal strings
       expect(result).not.toMatch(/\d+\.\d{10,}/);
       expect(result).toContain('19.5');
+    });
+  });
+
+  describe('buildReportsZip', () => {
+    it('creates a ZIP with the workspace folder', async () => {
+      const data: AllReportsData = {
+        workspaceName: 'test-workspace',
+        yearlyChange: [
+          { year: 2024, population: 10000000, births: 100000, deaths: 80000, migration: 5000 },
+        ],
+      };
+
+      const zip = buildReportsZip(data);
+      
+      // Verify the ZIP has the workspace folder
+      expect(zip.folder('test-workspace')).not.toBeNull();
+    });
+
+    it('includes yearly change CSV when data is provided', async () => {
+      const data: AllReportsData = {
+        workspaceName: 'test',
+        yearlyChange: [
+          { year: 2024, population: 10000000, births: 100000, deaths: 80000, migration: 5000 },
+          { year: 2025, population: 10025000, births: 98000, deaths: 82000, migration: 4000 },
+        ],
+      };
+
+      const zip = buildReportsZip(data);
+      
+      // Verify the ZIP contents
+      const yearlyChangeFile = zip.file('test/yearly-change.csv');
+      expect(yearlyChangeFile).not.toBeNull();
+      
+      const content = await yearlyChangeFile!.async('string');
+      expect(content).toContain('Year,Population,Births,Deaths,Net Migration');
+      expect(content).toContain('2024');
+      expect(content).toContain('2025');
+    });
+
+    it('includes population pyramids for each year', async () => {
+      const data: AllReportsData = {
+        workspaceName: 'test',
+        populationByYear: [
+          { year: 2024, cohorts: [{ age: 0, male: 50000, female: 48000 }], total: 98000 },
+          { year: 2025, cohorts: [{ age: 0, male: 49000, female: 47000 }], total: 96000 },
+        ],
+      };
+
+      const zip = buildReportsZip(data);
+      
+      const pyramid2024 = zip.file('test/population-pyramids/pyramid-2024.csv');
+      const pyramid2025 = zip.file('test/population-pyramids/pyramid-2025.csv');
+      
+      expect(pyramid2024).not.toBeNull();
+      expect(pyramid2025).not.toBeNull();
+      
+      // Verify content
+      const content = await pyramid2024!.async('string');
+      expect(content).toContain('Age,Male,Female,Total');
+    });
+
+    it('includes age groups for each year', async () => {
+      const data: AllReportsData = {
+        workspaceName: 'test',
+        ageGroups: [
+          { year: 2024, groups: [{ label: 'Children', male: 1000, female: 1000, total: 2000, percentage: 20 }] },
+          { year: 2025, groups: [{ label: 'Children', male: 950, female: 950, total: 1900, percentage: 19 }] },
+        ],
+      };
+
+      const zip = buildReportsZip(data);
+      
+      expect(zip.file('test/age-groups/age-groups-2024.csv')).not.toBeNull();
+      expect(zip.file('test/age-groups/age-groups-2025.csv')).not.toBeNull();
+    });
+
+    it('includes all report types when all data is provided', async () => {
+      const data: AllReportsData = {
+        workspaceName: 'full-export',
+        yearlyChange: [{ year: 2024, population: 10000000, births: 100000, deaths: 80000, migration: 5000 }],
+        populationByYear: [{ year: 2024, cohorts: [{ age: 0, male: 50000, female: 48000 }], total: 98000 }],
+        ageGroups: [{ year: 2024, groups: [{ label: 'Children', male: 1000, female: 1000, total: 2000, percentage: 20 }] }],
+        dependencyRatios: [{ year: 2024, youthPop: 2000, workingAgePop: 6000, elderlyPop: 2000, youthRatio: 33.3, oldAgeRatio: 33.3, totalRatio: 66.6 }],
+        sexRatios: [{ year: 2024, overallRatio: 102, atBirthRatio: 105, childrenRatio: 104, workingAgeRatio: 101, elderlyRatio: 85, totalMale: 5100, totalFemale: 5000 }],
+        cohortTracking: { birthYear: 2024, data: [{ year: 2024, age: 0, population: 98000, male: 50000, female: 48000 }] },
+        medianAge: [{ year: 2024, medianAge: 38.5, medianAgeMale: 37.2, medianAgeFemale: 39.8 }],
+        lifeTable: [{ age: 0, qx: 0.005, lx: 100000, dx: 500, Lx: 99750, Tx: 7800000, ex: 78.0 }],
+      };
+
+      const zip = buildReportsZip(data);
+      
+      // Check all expected files are present
+      expect(zip.file('full-export/yearly-change.csv')).not.toBeNull();
+      expect(zip.file('full-export/population-pyramids/pyramid-2024.csv')).not.toBeNull();
+      expect(zip.file('full-export/age-groups/age-groups-2024.csv')).not.toBeNull();
+      expect(zip.file('full-export/dependency-ratios.csv')).not.toBeNull();
+      expect(zip.file('full-export/sex-ratios.csv')).not.toBeNull();
+      expect(zip.file('full-export/cohort-tracking-born-2024.csv')).not.toBeNull();
+      expect(zip.file('full-export/median-age.csv')).not.toBeNull();
+      expect(zip.file('full-export/life-table.csv')).not.toBeNull();
+    });
+
+    it('handles empty data gracefully', () => {
+      const data: AllReportsData = {
+        workspaceName: 'empty-workspace',
+      };
+
+      const zip = buildReportsZip(data);
+      
+      // Should create a valid ZIP with just the folder
+      expect(zip.file('empty-workspace/yearly-change.csv')).toBeNull();
+      // Folder should exist
+      expect(zip.folder('empty-workspace')).not.toBeNull();
+    });
+
+    it('verifies CSV content in life table file', async () => {
+      const data: AllReportsData = {
+        workspaceName: 'test',
+        lifeTable: [
+          { age: 0, qx: 0.005, lx: 100000, dx: 500, Lx: 99750, Tx: 7800000, ex: 78.0 },
+          { age: 1, qx: 0.001, lx: 99500, dx: 100, Lx: 99450, Tx: 7700250, ex: 77.39 },
+        ],
+      };
+
+      const zip = buildReportsZip(data);
+      
+      const lifeTableFile = zip.file('test/life-table.csv');
+      expect(lifeTableFile).not.toBeNull();
+      
+      const content = await lifeTableFile!.async('string');
+      expect(content).toContain('Age,qx,lx,dx,Lx,Tx,ex');
+      expect(content).toContain('78');
     });
   });
 });
