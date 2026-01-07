@@ -23,16 +23,26 @@ const REGION_FILL_COLOR: [number, number, number, number] = [255, 64, 128, 160];
 const REGION_LINE_COLOR: [number, number, number, number] = [255, 255, 255, 255]; // white outline
 const REGION_HOVER_COLOR: [number, number, number, number] = [255, 214, 64, 220]; // gold on hover
 const DENSITY_COLORS: [number, number, number, number][] = [
-  [247, 251, 255, 200],
+  [255, 255, 255, 200],
+  [240, 248, 255, 200],
   [222, 235, 247, 205],
-  [198, 219, 239, 210],
-  [158, 202, 225, 215],
-  [107, 174, 214, 220],
-  [66, 146, 198, 225],
-  [33, 113, 181, 230],
-  [8, 81, 156, 235],
-  [8, 48, 107, 240],
-  [3, 19, 43, 245]
+  [200, 221, 240, 205],
+  [188, 210, 232, 210],
+  [173, 200, 227, 212],
+  [158, 190, 220, 214],
+  [140, 180, 214, 216],
+  [123, 169, 208, 218],
+  [107, 160, 203, 220],
+  [92, 150, 198, 223],
+  [78, 140, 192, 226],
+  [64, 130, 186, 229],
+  [50, 115, 177, 232],
+  [40, 100, 165, 234],
+  [30, 85, 153, 237],
+  [22, 70, 142, 240],
+  [15, 58, 125, 242],
+  [10, 45, 108, 244],
+  [5, 30, 90, 246]
 ];
 
 export function Map() {
@@ -55,6 +65,7 @@ export function Map() {
   const [populationError, setPopulationError] = useState<string | null>(null);
   const [populationYear, setPopulationYear] = useState<string | null>(null);
   const [populationYears, setPopulationYears] = useState<string[]>([]);
+  const [perYearFeatures, setPerYearFeatures] = useState<Map<string, Feature<Geometry, RegionProperties>[]>>(new globalThis.Map());
   const [layerFeatures, setLayerFeatures] = useState<Feature<Geometry, RegionProperties>[] | null>(null);
   const [hoverInfo, setHoverInfo] = useState<{ name: string; population: number | null; density: number | null; areaSqKm: number | null } | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -95,8 +106,6 @@ export function Map() {
         setPopulationYears(parsed.years);
         setPopulationYear(preferredYear);
         setPopulationByYear(parsed.byYear);
-        const map = parsed.byYear.get(preferredYear) ?? new Map();
-        setPopulationByCode(map);
         setPopulationLoading(false);
         console.log(`[Map] Loaded population CSV, default year ${preferredYear}, areas ${map.size}`);
       })
@@ -110,17 +119,70 @@ export function Map() {
   // Combine regions with population lookup
   useEffect(() => {
     if (!regionsData) return;
-    if (populationByCode) {
-      setLayerFeatures(augmentFeaturesWithPopulation(regionsData, populationByCode));
-    } else {
-      setLayerFeatures(augmentFeaturesWithPopulation(regionsData, new Map()));
+    if (!populationByYear) {
+      setLayerFeatures(augmentFeaturesWithPopulation(regionsData, new globalThis.Map()));
+      return;
     }
-  }, [regionsData, populationByCode]);
+
+    const { perYearFeatures } = precomputePopulationByYear(regionsData, populationByYear, DENSITY_COLORS);
+    setPerYearFeatures(perYearFeatures);
+
+    if (populationYear) {
+      const pre = perYearFeatures.get(populationYear);
+      if (pre) {
+        setLayerFeatures(pre);
+        const map = populationByYear.get(populationYear) ?? new globalThis.Map();
+        setPopulationByCode(map);
+      }
+    }
+  }, [regionsData, populationByYear, populationYear]);
 
   const densityColorScale = useMemo(() => {
     if (!layerFeatures) return null;
     const densities = layerFeatures.map((f) => f.properties?.density ?? null);
-    return createPopulationColorScale(densities);
+    const scale = createPopulationColorScale(densities, DENSITY_COLORS);
+    // #region agent log
+    const numericDensities = densities.filter((v): v is number => Number.isFinite(v as number)).sort((a, b) => a - b);
+    const bucketCount = DENSITY_COLORS.length;
+    const thresholds: number[] = [];
+    if (numericDensities.length > 0) {
+      for (let i = 1; i < bucketCount; i++) {
+        const idx = Math.min(numericDensities.length - 1, Math.floor((i * numericDensities.length) / bucketCount));
+        thresholds.push(numericDensities[idx]);
+      }
+    }
+    const sampleValues = numericDensities.length
+      ? [
+          numericDensities[0],
+          numericDensities[Math.floor(numericDensities.length / 4)] ?? null,
+          numericDensities[Math.floor(numericDensities.length / 2)] ?? null,
+          numericDensities[Math.floor((3 * numericDensities.length) / 4)] ?? null,
+          numericDensities[numericDensities.length - 1]
+        ]
+      : [];
+    fetch('http://127.0.0.1:7244/ingest/077d060f-f64b-4665-8ffb-d4911617c6a2', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'pre-fix2',
+        hypothesisId: 'H_scale2',
+        location: 'Map.tsx:densityColorScale',
+        message: 'Scale thresholds and samples',
+        data: {
+          densitiesCount: densities.length,
+          numericCount: numericDensities.length,
+          min: numericDensities[0] ?? null,
+          max: numericDensities[numericDensities.length - 1] ?? null,
+          thresholds,
+          bucketCount,
+          sampleValues
+        },
+        timestamp: Date.now()
+      })
+    }).catch(() => {});
+    // #endregion
+    return scale;
   }, [layerFeatures]);
 
   // Animation effect for year slider
@@ -138,8 +200,12 @@ export function Map() {
   // Update population map when year changes
   useEffect(() => {
     if (!populationYear || !populationByYear) return;
-    const map = populationByYear.get(populationYear) ?? new Map();
+    const map = populationByYear.get(populationYear) ?? new globalThis.Map();
     setPopulationByCode(map);
+    const pre = perYearFeatures.get(populationYear);
+    if (pre) {
+      setLayerFeatures(pre);
+    }
   }, [populationYear, populationByYear]);
 
   const summary = useMemo(() => {
@@ -190,6 +256,28 @@ export function Map() {
               : hasData
               ? REGION_FILL_COLOR
               : [180, 180, 180, 120];
+          // #region agent log
+          if ((d.properties as any)?.LAD23CD && Math.random() < 0.02) {
+            fetch('http://127.0.0.1:7244/ingest/077d060f-f64b-4665-8ffb-d4911617c6a2', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sessionId: 'debug-session',
+                runId: 'pre-fix1',
+                hypothesisId: 'H_fill',
+                location: 'Map.tsx:getFillColor',
+                message: 'Fill color assignment sample',
+                data: {
+                  code: (d.properties as any)?.LAD23CD,
+                  density,
+                  hasData,
+                  color: baseColor
+                },
+                timestamp: Date.now()
+              })
+            }).catch(() => {});
+          }
+          // #endregion
             return name === hoveredRegion ? REGION_HOVER_COLOR : (baseColor as [number, number, number, number]);
         },
         getLineColor: REGION_LINE_COLOR,

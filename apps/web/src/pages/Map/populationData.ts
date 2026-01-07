@@ -73,6 +73,77 @@ export function parsePopulationCsvByYear(csvText: string): { years: string[]; by
 }
 
 /**
+ * Precompute population, density, and colors per year for fast switching.
+ */
+export function precomputePopulationByYear(
+  features: Feature<Geometry, RegionProperties>[],
+  populationByYear: Map<string, Map<string, number>>,
+  colorsPalette: [number, number, number, number][]
+): {
+  perYearFeatures: Map<string, Feature<Geometry, RegionProperties>[]>;
+  thresholds: Map<string, number[]>;
+} {
+  const perYearFeatures = new Map<string, Feature<Geometry, RegionProperties>[]>();
+  const thresholdsMap = new Map<string, number[]>();
+
+  for (const [year, popMap] of populationByYear.entries()) {
+    const augmented = augmentFeaturesWithPopulation(features, popMap);
+    const densities = augmented.map((f) => f.properties?.density ?? null);
+    const scale = createPopulationColorScale(densities, colorsPalette);
+
+    const colorsUsed = new Set<string>();
+    const thresholds: number[] = [];
+    if (densities.length) {
+      const values = densities.filter((v): v is number => Number.isFinite(v as number)).sort((a, b) => a - b);
+      const bucketCount = colorsPalette.length;
+      for (let i = 1; i < bucketCount; i++) {
+        const idx = Math.min(values.length - 1, Math.floor((i * values.length) / bucketCount));
+        thresholds.push(values[idx]);
+      }
+    }
+    thresholdsMap.set(year, thresholds);
+
+    const withColors = augmented.map((f) => {
+      const density = f.properties?.density ?? null;
+      const color = scale(density);
+      colorsUsed.add(color.join(','));
+      return {
+        ...f,
+        properties: {
+          ...f.properties,
+          color
+        }
+      };
+    });
+
+    perYearFeatures.set(year, withColors);
+
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/077d060f-f64b-4665-8ffb-d4911617c6a2', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'pre-fix3',
+        hypothesisId: 'H_precompute',
+        location: 'populationData.ts:precomputePopulationByYear',
+        message: 'Precomputed year data',
+        data: {
+          year,
+          thresholds,
+          colorsUsed: Array.from(colorsUsed),
+          featureCount: withColors.length
+        },
+        timestamp: Date.now()
+      })
+    }).catch(() => {});
+    // #endregion
+  }
+
+  return { perYearFeatures, thresholds: thresholdsMap };
+}
+
+/**
  * Attach population data to region features. If no data is present, population = null and hasPopulationData = false.
  */
 export function augmentFeaturesWithPopulation(
@@ -102,19 +173,29 @@ export function augmentFeaturesWithPopulation(
 /**
  * Build a quantile-like color scale for values (population density). No-data returns a gray fill.
  */
-export function createPopulationColorScale(valuesInput: Array<number | null | undefined>) {
+export function createPopulationColorScale(valuesInput: Array<number | null | undefined>, paletteOverride?: [number, number, number, number][]) {
   const values = valuesInput.filter((v): v is number => Number.isFinite(v as number)).sort((a, b) => a - b);
-  const colors: [number, number, number, number][] = [
-    [247, 251, 255, 200],
+  const colors: [number, number, number, number][] = paletteOverride ?? [
+    [255, 255, 255, 200],
+    [240, 248, 255, 200],
     [222, 235, 247, 205],
-    [198, 219, 239, 210],
-    [158, 202, 225, 215],
-    [107, 174, 214, 220],
-    [66, 146, 198, 225],
-    [33, 113, 181, 230],
-    [8, 81, 156, 235],
-    [8, 48, 107, 240],
-    [3, 19, 43, 245]
+    [200, 221, 240, 205],
+    [188, 210, 232, 210],
+    [173, 200, 227, 212],
+    [158, 190, 220, 214],
+    [140, 180, 214, 216],
+    [123, 169, 208, 218],
+    [107, 160, 203, 220],
+    [92, 150, 198, 223],
+    [78, 140, 192, 226],
+    [64, 130, 186, 229],
+    [50, 115, 177, 232],
+    [40, 100, 165, 234],
+    [30, 85, 153, 237],
+    [22, 70, 142, 240],
+    [15, 58, 125, 242],
+    [10, 45, 108, 244],
+    [5, 30, 90, 246]
   ];
   const noDataColor: [number, number, number, number] = [180, 180, 180, 120];
 
@@ -126,6 +207,22 @@ export function createPopulationColorScale(valuesInput: Array<number | null | un
       thresholds.push(values[idx]);
     }
   }
+
+  // #region agent log
+  fetch('http://127.0.0.1:7244/ingest/077d060f-f64b-4665-8ffb-d4911617c6a2', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sessionId: 'debug-session',
+      runId: 'pre-fix1',
+      hypothesisId: 'H_thresholds',
+      location: 'populationData.ts:createPopulationColorScale',
+      message: 'Computed thresholds and colors',
+      data: { valuesCount: values.length, min: values[0] ?? null, max: values[values.length - 1] ?? null, thresholds, bucketCount },
+      timestamp: Date.now()
+    })
+  }).catch(() => {});
+  // #endregion
 
   return (population: number | null) => {
     if (population === null || !Number.isFinite(population)) return noDataColor;
