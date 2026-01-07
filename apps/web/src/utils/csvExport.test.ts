@@ -206,6 +206,100 @@ describe('CSV Export Utilities', () => {
       expect(result).toContain('0,0.005,100000,500,99750,7500000,75');
       expect(result).toContain('1,0.001,99500,100,99450,7400250,74.4');
     });
+
+    it('handles floating-point precision issues in qx values', () => {
+      // These values can cause floating-point precision issues in JavaScript
+      // e.g., 0.00012 might become 0.00011999999999999999
+      const data = [
+        { age: 5, qx: 0.00012, lx: 99500, dx: 12, Lx: 99494, Tx: 7000000, ex: 70.35 },
+        { age: 6, qx: 0.00011, lx: 99488, dx: 11, Lx: 99482.5, Tx: 6900506, ex: 69.36 },
+      ];
+      
+      const result = exportLifeTableCSV(data);
+      
+      // Should NOT contain long floating-point strings
+      expect(result).not.toMatch(/0\.000\d{10,}/); // No more than 10 digits after decimal
+      expect(result).not.toMatch(/\d+\.\d{10,}/);  // No values with 10+ decimal places
+      
+      // Should contain properly rounded values
+      expect(result).toContain('0.00012');
+      expect(result).toContain('0.00011');
+    });
+
+    it('rounds Lx and Tx to reasonable precision', () => {
+      const data = [
+        { age: 0, qx: 0.005, lx: 100000, dx: 500, Lx: 99708.12345678, Tx: 7541943.6789, ex: 75.41943599999999 },
+      ];
+      
+      const result = exportLifeTableCSV(data);
+      
+      // Lx and Tx should be rounded to 1 decimal place
+      expect(result).toContain('99708.1');
+      expect(result).toContain('7541943.7');
+      // ex should be rounded to 2 decimal places
+      expect(result).toContain('75.42');
+    });
+  });
+
+  describe('Floating-point precision', () => {
+    it('exportDependencyRatiosCSV handles floating-point precision', () => {
+      // 28.571428571428573 is a common floating-point result
+      const data = [
+        { year: 2024, youthPop: 2000000, workingAgePop: 7000000, elderlyPop: 1000000, 
+          youthRatio: 28.571428571428573, oldAgeRatio: 14.285714285714286, totalRatio: 42.857142857142854 },
+      ];
+      
+      const result = exportDependencyRatiosCSV(data);
+      
+      // Should not contain long decimal strings
+      expect(result).not.toMatch(/\d+\.\d{10,}/);
+      // Should have properly rounded values
+      expect(result).toContain('28.57');
+      expect(result).toContain('14.29');
+      expect(result).toContain('42.86');
+    });
+
+    it('exportSexRatiosCSV handles floating-point precision', () => {
+      const data = [
+        { year: 2024, overallRatio: 98.51234567890123, atBirthRatio: 105.00000000000001, 
+          childrenRatio: 104.49999999999999, workingAgeRatio: 99.12345678901234, 
+          elderlyRatio: 74.99999999999999, totalMale: 4900000, totalFemale: 5100000 },
+      ];
+      
+      const result = exportSexRatiosCSV(data);
+      
+      // Should not contain long decimal strings
+      expect(result).not.toMatch(/\d+\.\d{10,}/);
+    });
+
+    it('exportMedianAgeCSV handles floating-point precision', () => {
+      const data = [
+        { year: 2024, medianAge: 38.49999999999999, medianAgeMale: 37.19999999999999, 
+          medianAgeFemale: 39.80000000000001, change: 0.20000000000000018 },
+      ];
+      
+      const result = exportMedianAgeCSV(data);
+      
+      // Should not contain long decimal strings
+      expect(result).not.toMatch(/\d+\.\d{10,}/);
+      // Should have properly rounded values
+      expect(result).toContain('38.5');
+      expect(result).toContain('37.2');
+      expect(result).toContain('39.8');
+      expect(result).toContain('0.2');
+    });
+
+    it('exportAgeGroupsCSV handles floating-point precision in percentages', () => {
+      const data = [
+        { label: 'Children', male: 1000000, female: 950000, total: 1950000, percentage: 19.50000000000001 },
+      ];
+      
+      const result = exportAgeGroupsCSV(data, 2024);
+      
+      // Should not contain long decimal strings
+      expect(result).not.toMatch(/\d+\.\d{10,}/);
+      expect(result).toContain('19.5');
+    });
   });
 });
 

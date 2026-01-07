@@ -3,6 +3,15 @@
  */
 
 /**
+ * Rounds a number to a specified number of decimal places
+ * Handles floating-point precision issues (e.g., 0.00011999999999999999 -> 0.00012)
+ */
+function round(value: number, decimals: number): number {
+  const factor = Math.pow(10, decimals);
+  return Math.round(value * factor) / factor;
+}
+
+/**
  * Escapes a value for CSV format
  */
 function escapeCSVValue(value: unknown): string {
@@ -104,8 +113,17 @@ export function exportAgeGroupsCSV(
   data: { label: string; male: number; female: number; total: number; percentage: number }[],
   year: number
 ): string {
+  // Round percentage to avoid floating-point precision issues
+  const formattedData = data.map(d => ({
+    label: d.label,
+    male: d.male,
+    female: d.female,
+    total: d.total,
+    percentage: round(d.percentage, 2),
+  }));
+
   return generateCSV(
-    data,
+    formattedData,
     ['label', 'male', 'female', 'total', 'percentage'],
     {
       label: 'Age Group',
@@ -123,8 +141,19 @@ export function exportAgeGroupsCSV(
 export function exportDependencyRatiosCSV(
   data: { year: number; youthPop: number; workingAgePop: number; elderlyPop: number; youthRatio: number; oldAgeRatio: number; totalRatio: number }[]
 ): string {
+  // Round ratios to 2 decimal places
+  const formattedData = data.map(d => ({
+    year: d.year,
+    youthPop: d.youthPop,
+    workingAgePop: d.workingAgePop,
+    elderlyPop: d.elderlyPop,
+    youthRatio: round(d.youthRatio, 2),
+    oldAgeRatio: round(d.oldAgeRatio, 2),
+    totalRatio: round(d.totalRatio, 2),
+  }));
+
   return generateCSV(
-    data,
+    formattedData,
     ['year', 'youthPop', 'workingAgePop', 'elderlyPop', 'youthRatio', 'oldAgeRatio', 'totalRatio'],
     {
       year: 'Year',
@@ -144,8 +173,20 @@ export function exportDependencyRatiosCSV(
 export function exportSexRatiosCSV(
   data: { year: number; overallRatio: number; atBirthRatio: number; childrenRatio: number; workingAgeRatio: number; elderlyRatio: number; totalMale: number; totalFemale: number }[]
 ): string {
+  // Round ratios to 2 decimal places
+  const formattedData = data.map(d => ({
+    year: d.year,
+    overallRatio: round(d.overallRatio, 2),
+    atBirthRatio: round(d.atBirthRatio, 2),
+    childrenRatio: round(d.childrenRatio, 2),
+    workingAgeRatio: round(d.workingAgeRatio, 2),
+    elderlyRatio: round(d.elderlyRatio, 2),
+    totalMale: d.totalMale,
+    totalFemale: d.totalFemale,
+  }));
+
   return generateCSV(
-    data,
+    formattedData,
     ['year', 'overallRatio', 'atBirthRatio', 'childrenRatio', 'workingAgeRatio', 'elderlyRatio', 'totalMale', 'totalFemale'],
     {
       year: 'Year',
@@ -199,12 +240,13 @@ export function exportCohortTrackingCSV(
 export function exportMedianAgeCSV(
   data: { year: number; medianAge: number; medianAgeMale: number; medianAgeFemale: number; change?: number }[]
 ): string {
+  // Round ages to 1 decimal place, change to 2 decimal places
   const formattedData = data.map(d => ({
     year: d.year,
-    medianAge: d.medianAge,
-    medianAgeMale: d.medianAgeMale,
-    medianAgeFemale: d.medianAgeFemale,
-    change: d.change !== undefined ? d.change : '',
+    medianAge: round(d.medianAge, 1),
+    medianAgeMale: round(d.medianAgeMale, 1),
+    medianAgeFemale: round(d.medianAgeFemale, 1),
+    change: d.change !== undefined ? round(d.change, 2) : '',
   }));
   
   return generateCSV(
@@ -226,8 +268,19 @@ export function exportMedianAgeCSV(
 export function exportLifeTableCSV(
   data: { age: number; qx: number; lx: number; dx: number; Lx: number; Tx: number; ex: number }[]
 ): string {
+  // Round values to appropriate precision to avoid floating-point issues
+  const formattedData = data.map(row => ({
+    age: row.age,
+    qx: round(row.qx, 8),        // 8 decimal places for mortality probabilities
+    lx: Math.round(row.lx),       // Integer for survivors
+    dx: Math.round(row.dx),       // Integer for deaths
+    Lx: round(row.Lx, 1),         // 1 decimal for person-years lived
+    Tx: round(row.Tx, 1),         // 1 decimal for total person-years
+    ex: round(row.ex, 2),         // 2 decimals for life expectancy
+  }));
+
   return generateCSV(
-    data,
+    formattedData,
     ['age', 'qx', 'lx', 'dx', 'Lx', 'Tx', 'ex'],
     {
       age: 'Age',
