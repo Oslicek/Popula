@@ -105,11 +105,16 @@ export function augmentFeaturesWithPopulation(
 export function createPopulationColorScale(valuesInput: Array<number | null | undefined>) {
   const values = valuesInput.filter((v): v is number => Number.isFinite(v as number)).sort((a, b) => a - b);
   const colors: [number, number, number, number][] = [
-    [237, 248, 251, 200],
-    [191, 211, 230, 220],
-    [158, 188, 218, 230],
-    [117, 107, 177, 235],
-    [84, 39, 143, 240]
+    [247, 251, 255, 200],
+    [222, 235, 247, 205],
+    [198, 219, 239, 210],
+    [158, 202, 225, 215],
+    [107, 174, 214, 220],
+    [66, 146, 198, 225],
+    [33, 113, 181, 230],
+    [8, 81, 156, 235],
+    [8, 48, 107, 240],
+    [3, 19, 43, 245]
   ];
   const noDataColor: [number, number, number, number] = [180, 180, 180, 120];
 

@@ -60,9 +60,10 @@
 
 .tooltip {
   position: absolute;
-  top: 180px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 120px;
+  right: 24px;
+  left: auto;
+  transform: none;
   z-index: 1000;
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-accent-secondary);
