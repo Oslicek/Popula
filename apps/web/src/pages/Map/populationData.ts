@@ -72,6 +72,17 @@ export function parsePopulationCsvByYear(csvText: string): { years: string[]; by
   return { years, byYear };
 }
 
+const computeQuantileThresholds = (values: number[], bucketCount: number): number[] => {
+  const thresholds: number[] = [];
+  if (values.length > 0) {
+    for (let i = 1; i < bucketCount; i++) {
+      const idx = Math.min(values.length - 1, Math.floor((i * values.length) / bucketCount));
+      thresholds.push(values[idx]);
+    }
+  }
+  return thresholds;
+};
+
 /**
  * Precompute population, density, and colors per year for fast switching.
  */
@@ -85,24 +96,25 @@ export function precomputePopulationByYear(
 } {
   const perYearFeatures = new Map<string, Feature<Geometry, RegionProperties>[]>();
   const thresholdsMap = new Map<string, number[]>();
+  const augmentedByYear = new Map<string, Feature<Geometry, RegionProperties>[]>();
+  const allDensities: number[] = [];
 
+  // First pass: augment per year and collect all densities
   for (const [year, popMap] of populationByYear.entries()) {
     const augmented = augmentFeaturesWithPopulation(features, popMap);
-    const densities = augmented.map((f) => f.properties?.density ?? null);
-    const scale = createPopulationColorScale(densities, colorsPalette);
-
-    const colorsUsed = new Set<string>();
-    const thresholds: number[] = [];
-    if (densities.length) {
-      const values = densities.filter((v): v is number => Number.isFinite(v as number)).sort((a, b) => a - b);
-      const bucketCount = colorsPalette.length;
-      for (let i = 1; i < bucketCount; i++) {
-        const idx = Math.min(values.length - 1, Math.floor((i * values.length) / bucketCount));
-        thresholds.push(values[idx]);
-      }
+    augmentedByYear.set(year, augmented);
+    for (const f of augmented) {
+      const d = f.properties?.density;
+      if (Number.isFinite(d)) allDensities.push(d as number);
     }
-    thresholdsMap.set(year, thresholds);
+  }
 
+  const globalThresholds = computeQuantileThresholds(allDensities.sort((a, b) => a - b), colorsPalette.length);
+
+  // Second pass: assign colors using global thresholds
+  for (const [year, augmented] of augmentedByYear.entries()) {
+    const scale = createPopulationColorScale([], colorsPalette, globalThresholds);
+    const colorsUsed = new Set<string>();
     const withColors = augmented.map((f) => {
       const density = f.properties?.density ?? null;
       const color = scale(density);
@@ -115,8 +127,8 @@ export function precomputePopulationByYear(
         }
       };
     });
-
     perYearFeatures.set(year, withColors);
+    thresholdsMap.set(year, globalThresholds);
 
     // #region agent log
     fetch('http://127.0.0.1:7244/ingest/077d060f-f64b-4665-8ffb-d4911617c6a2', {
@@ -124,13 +136,13 @@ export function precomputePopulationByYear(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sessionId: 'debug-session',
-        runId: 'pre-fix3',
-        hypothesisId: 'H_precompute',
+        runId: 'pre-fix4',
+        hypothesisId: 'H_precompute_global',
         location: 'populationData.ts:precomputePopulationByYear',
-        message: 'Precomputed year data',
+        message: 'Precomputed year data with global thresholds',
         data: {
           year,
-          thresholds,
+          thresholds: globalThresholds,
           colorsUsed: Array.from(colorsUsed),
           featureCount: withColors.length
         },
@@ -173,7 +185,11 @@ export function augmentFeaturesWithPopulation(
 /**
  * Build a quantile-like color scale for values (population density). No-data returns a gray fill.
  */
-export function createPopulationColorScale(valuesInput: Array<number | null | undefined>, paletteOverride?: [number, number, number, number][]) {
+export function createPopulationColorScale(
+  valuesInput: Array<number | null | undefined>,
+  paletteOverride?: [number, number, number, number][],
+  thresholdsOverride?: number[]
+) {
   const values = valuesInput.filter((v): v is number => Number.isFinite(v as number)).sort((a, b) => a - b);
   const colors: [number, number, number, number][] = paletteOverride ?? [
     [255, 255, 255, 200],
@@ -198,15 +214,12 @@ export function createPopulationColorScale(valuesInput: Array<number | null | un
     [5, 30, 90, 246]
   ];
   const noDataColor: [number, number, number, number] = [180, 180, 180, 120];
-
-  const thresholds: number[] = [];
   const bucketCount = colors.length;
-  if (values.length > 0) {
-    for (let i = 1; i < bucketCount; i++) {
-      const idx = Math.min(values.length - 1, Math.floor((i * values.length) / bucketCount));
-      thresholds.push(values[idx]);
-    }
-  }
+
+  const thresholds: number[] =
+    thresholdsOverride && thresholdsOverride.length
+      ? thresholdsOverride
+      : computeQuantileThresholds(values, colors.length);
 
   // #region agent log
   fetch('http://127.0.0.1:7244/ingest/077d060f-f64b-4665-8ffb-d4911617c6a2', {

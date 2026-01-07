@@ -9,7 +9,8 @@ import {
   augmentFeaturesWithPopulation,
   createPopulationColorScale,
   getLastYearFromCsv,
-  parsePopulationCsvByYear
+  parsePopulationCsvByYear,
+  precomputePopulationByYear
 } from './populationData';
 import type { RegionProperties } from './types';
 import styles from './Map.module.css';
@@ -124,11 +125,11 @@ export function Map() {
       return;
     }
 
-    const { perYearFeatures } = precomputePopulationByYear(regionsData, populationByYear, DENSITY_COLORS);
-    setPerYearFeatures(perYearFeatures);
+    const precomputed = precomputePopulationByYear(regionsData, populationByYear, DENSITY_COLORS);
+    setPerYearFeatures(precomputed.perYearFeatures);
 
     if (populationYear) {
-      const pre = perYearFeatures.get(populationYear);
+      const pre = precomputed.perYearFeatures.get(populationYear);
       if (pre) {
         setLayerFeatures(pre);
         const map = populationByYear.get(populationYear) ?? new globalThis.Map();
