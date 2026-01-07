@@ -27,7 +27,7 @@ export function MedianAgeChart({ data }: MedianAgeChartProps) {
     const years = data.map(d => d.year);
 
     return {
-      $schema: 'https://vega.github.io/schema/vega/v5.json',
+      $schema: 'https://vega.github.io/schema/vega/v6.json',
       width: 700,
       height: 400,
       padding: { left: 60, right: 150, top: 30, bottom: 50 },
@@ -149,6 +149,6 @@ export function MedianAgeChart({ data }: MedianAgeChartProps) {
     };
   }, [data]);
 
-  return <VegaEmbed spec={spec} actions={false} />;
+  return <VegaEmbed spec={spec} options={{ actions: false }} />;
 }
 

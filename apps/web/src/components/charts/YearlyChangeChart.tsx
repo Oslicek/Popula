@@ -45,7 +45,7 @@ function createSpec(data: ProjectionYear[], width: number, height: number) {
   ];
 
   return {
-    $schema: 'https://vega.github.io/schema/vega/v5.json',
+    $schema: 'https://vega.github.io/schema/vega/v6.json',
     width: width - 160,
     height: height - 100,
     padding: { left: 80, right: 80, top: 50, bottom: 50 },

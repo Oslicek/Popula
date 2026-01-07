@@ -1358,7 +1358,7 @@ export function Workspace() {
           )}
 
           {/* Life Table View */}
-          {resultView === 'life-table' && workspace.data.mortality && (
+          {resultView === 'life-table' && workspace.data?.mortality && (
             <div className={styles.lifeTableView}>
               {(() => {
                 // Convert mortality data to life table format
@@ -1431,7 +1431,7 @@ export function Workspace() {
             </div>
           )}
 
-          {resultView === 'life-table' && !workspace.data.mortality && (
+          {resultView === 'life-table' && !workspace.data?.mortality && (
             <div className={styles.noData}>
               <p>Mortality data is required to generate a life table. Please import mortality data first.</p>
             </div>

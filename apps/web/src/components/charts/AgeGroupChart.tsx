@@ -48,7 +48,7 @@ export function AgeGroupChart({ data, selectedYear }: AgeGroupChartProps) {
     const maxYear = Math.max(...years);
 
     return {
-      $schema: 'https://vega.github.io/schema/vega/v5.json',
+      $schema: 'https://vega.github.io/schema/vega/v6.json',
       width: 700,
       height: 400,
       padding: { left: 60, right: 150, top: 30, bottom: 60 },
@@ -179,6 +179,6 @@ export function AgeGroupChart({ data, selectedYear }: AgeGroupChartProps) {
     };
   }, [data, selectedYear]);
 
-  return <VegaEmbed spec={spec} actions={false} />;
+  return <VegaEmbed spec={spec} options={{ actions: false }} />;
 }
 

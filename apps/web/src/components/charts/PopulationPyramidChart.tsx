@@ -46,7 +46,7 @@ function createSpec(data: YearPopulationSnapshot, width: number, height: number)
   );
 
   return {
-    $schema: 'https://vega.github.io/schema/vega/v5.json',
+    $schema: 'https://vega.github.io/schema/vega/v6.json',
     width: width - 60,
     height: height - 60,
     padding: { left: 30, right: 30, top: 40, bottom: 40 },
