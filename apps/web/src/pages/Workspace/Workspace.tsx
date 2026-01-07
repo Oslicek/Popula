@@ -15,6 +15,12 @@ import type {
 } from '@popula/shared-types';
 import { isReadyForProjection, getWorkspaceValidationErrors } from '@popula/shared-types';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import {
+  calculateSexRatios,
+  calculateCohortTracking,
+  calculateMedianAgeProgression,
+  calculateLifeTable,
+} from '@/utils/demographicCalculations';
 import styles from './Workspace.module.css';
 
 // Lazy load chart components to avoid issues with Vega initialization
@@ -22,17 +28,36 @@ const YearlyChangeChart = lazy(() => import('@/components/charts/YearlyChangeCha
 const PopulationPyramidChart = lazy(() => import('@/components/charts/PopulationPyramidChart').then(m => ({ default: m.PopulationPyramidChart })));
 const AgeGroupChart = lazy(() => import('@/components/charts/AgeGroupChart').then(m => ({ default: m.AgeGroupChart })));
 const DependencyRatioChart = lazy(() => import('@/components/charts/DependencyRatioChart').then(m => ({ default: m.DependencyRatioChart })));
+const SexRatioChart = lazy(() => import('@/components/charts/SexRatioChart').then(m => ({ default: m.SexRatioChart })));
+const MedianAgeChart = lazy(() => import('@/components/charts/MedianAgeChart').then(m => ({ default: m.MedianAgeChart })));
 
 type DataType = 'population' | 'mortality' | 'fertility' | 'migration';
 
-type ResultView = 'yearly-change' | 'population-pyramid' | 'age-groups' | 'dependency-ratios';
+type ResultView = 
+  | 'yearly-change' 
+  | 'population-pyramid' 
+  | 'age-groups' 
+  | 'dependency-ratios'
+  | 'sex-ratios'
+  | 'cohort-tracking'
+  | 'median-age'
+  | 'life-table';
 
 type YearlyChartType = 'line-chart';
 type PyramidChartType = 'pyramid-chart';
 type AgeGroupChartType = 'stacked-bar-chart';
 type DependencyChartType = 'ratio-line-chart';
+type SexRatioChartType = 'sex-ratio-chart';
+type MedianAgeChartType = 'median-age-chart';
 
-type ChartType = YearlyChartType | PyramidChartType | AgeGroupChartType | DependencyChartType | 'table';
+type ChartType = 
+  | YearlyChartType 
+  | PyramidChartType 
+  | AgeGroupChartType 
+  | DependencyChartType 
+  | SexRatioChartType
+  | MedianAgeChartType
+  | 'table';
 
 // Age group definitions for policy analysis
 interface AgeGroupData {
@@ -614,6 +639,10 @@ export function Workspace() {
                 <option value="population-pyramid">Population Pyramid</option>
                 <option value="age-groups">Age Group Summary</option>
                 <option value="dependency-ratios">Dependency Ratios</option>
+                <option value="sex-ratios">Sex Ratio Analysis</option>
+                <option value="cohort-tracking">Cohort Tracking</option>
+                <option value="median-age">Median Age Progression</option>
+                <option value="life-table">Life Table</option>
               </select>
               
               <select
@@ -633,6 +662,12 @@ export function Workspace() {
                 )}
                 {resultView === 'dependency-ratios' && (
                   <option value="ratio-line-chart">📈 Ratio Line Chart</option>
+                )}
+                {resultView === 'sex-ratios' && (
+                  <option value="sex-ratio-chart">📈 Sex Ratio Chart</option>
+                )}
+                {resultView === 'median-age' && (
+                  <option value="median-age-chart">📈 Median Age Chart</option>
                 )}
               </select>
             </div>
@@ -1072,6 +1107,333 @@ export function Workspace() {
                   </>
                 );
               })()}
+            </div>
+          )}
+
+          {/* Sex Ratio Analysis View */}
+          {resultView === 'sex-ratios' && workspace.projection.populationByYear && (
+            <div className={styles.sexRatioView}>
+              {(() => {
+                const sexRatioData = calculateSexRatios(workspace.projection.populationByYear!);
+                const latestData = sexRatioData[sexRatioData.length - 1];
+                const firstData = sexRatioData[0];
+                
+                return (
+                  <>
+                    <div className={styles.sexRatioSummary}>
+                      <div className={styles.ratioCard}>
+                        <div className={styles.ratioCardTitle}>Overall Sex Ratio</div>
+                        <div className={styles.ratioCardValue}>{latestData?.overallRatio.toFixed(1)}</div>
+                        <div className={styles.ratioCardLabel}>Males per 100 females</div>
+                      </div>
+                      <div className={styles.ratioCard}>
+                        <div className={styles.ratioCardTitle}>At Birth</div>
+                        <div className={styles.ratioCardValue}>{latestData?.atBirthRatio.toFixed(1)}</div>
+                        <div className={styles.ratioCardLabel}>Age 0</div>
+                      </div>
+                      <div className={styles.ratioCard}>
+                        <div className={styles.ratioCardTitle}>Children (0-14)</div>
+                        <div className={styles.ratioCardValue}>{latestData?.childrenRatio.toFixed(1)}</div>
+                        <div className={styles.ratioCardLabel}>Pre-working age</div>
+                      </div>
+                      <div className={styles.ratioCard}>
+                        <div className={styles.ratioCardTitle}>Working Age (15-64)</div>
+                        <div className={styles.ratioCardValue}>{latestData?.workingAgeRatio.toFixed(1)}</div>
+                        <div className={styles.ratioCardLabel}>Economically active</div>
+                      </div>
+                      <div className={styles.ratioCard}>
+                        <div className={styles.ratioCardTitle}>Elderly (65+)</div>
+                        <div className={styles.ratioCardValue}>{latestData?.elderlyRatio.toFixed(1)}</div>
+                        <div className={styles.ratioCardLabel}>Higher female longevity</div>
+                      </div>
+                    </div>
+                    
+                    {chartType === 'sex-ratio-chart' ? (
+                      <div className={styles.chartContainer}>
+                        <ErrorBoundary fallback={<div className={styles.chartError}>Failed to load chart</div>}>
+                          <Suspense fallback={<div className={styles.chartLoading}>Loading chart...</div>}>
+                            <SexRatioChart data={sexRatioData} />
+                          </Suspense>
+                        </ErrorBoundary>
+                      </div>
+                    ) : (
+                      <div className={styles.tableWrapper}>
+                        <table className={styles.resultsTable}>
+                          <thead>
+                            <tr>
+                              <th>Year</th>
+                              <th>Overall</th>
+                              <th>At Birth</th>
+                              <th>Children</th>
+                              <th>Working Age</th>
+                              <th>Elderly</th>
+                              <th>Total Male</th>
+                              <th>Total Female</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sexRatioData.map(d => (
+                              <tr key={d.year}>
+                                <td>{d.year}</td>
+                                <td><strong>{d.overallRatio.toFixed(1)}</strong></td>
+                                <td>{d.atBirthRatio.toFixed(1)}</td>
+                                <td>{d.childrenRatio.toFixed(1)}</td>
+                                <td>{d.workingAgeRatio.toFixed(1)}</td>
+                                <td>{d.elderlyRatio.toFixed(1)}</td>
+                                <td>{d.totalMale.toLocaleString()}</td>
+                                <td>{d.totalFemale.toLocaleString()}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Cohort Tracking View */}
+          {resultView === 'cohort-tracking' && workspace.projection.populationByYear && (
+            <div className={styles.cohortTrackingView}>
+              {(() => {
+                const years = workspace.projection.populationByYear!;
+                const baseYear = years[0]?.year ?? 2024;
+                const [selectedBirthYear, setSelectedBirthYearLocal] = [
+                  baseYear,
+                  (_: number) => {} // Placeholder - we'll use component state instead
+                ];
+                
+                // Find available birth years (years where age 0 exists)
+                const availableBirthYears = years
+                  .filter(y => y.cohorts.some(c => c.age === 0))
+                  .map(y => y.year);
+                
+                // Default to first available birth year
+                const trackingYear = selectedPyramidYear ?? availableBirthYears[0] ?? baseYear;
+                const cohortData = calculateCohortTracking(years, trackingYear);
+                
+                return (
+                  <>
+                    <div className={styles.cohortControls}>
+                      <label className={styles.cohortLabel}>
+                        Track birth cohort from year:
+                        <select
+                          value={trackingYear}
+                          onChange={(e) => setSelectedPyramidYear(parseInt(e.target.value))}
+                          className={styles.viewSelect}
+                        >
+                          {availableBirthYears.map(y => (
+                            <option key={y} value={y}>Born in {y}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    
+                    {cohortData.length > 0 ? (
+                      <div className={styles.tableWrapper}>
+                        <table className={styles.resultsTable}>
+                          <thead>
+                            <tr>
+                              <th>Year</th>
+                              <th>Age</th>
+                              <th>Population</th>
+                              <th>Male</th>
+                              <th>Female</th>
+                              <th>Survival Rate</th>
+                              <th>Cumulative Survival</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cohortData.map(d => (
+                              <tr key={d.year}>
+                                <td>{d.year}</td>
+                                <td>{d.age}</td>
+                                <td><strong>{d.population.toLocaleString()}</strong></td>
+                                <td>{d.male.toLocaleString()}</td>
+                                <td>{d.female.toLocaleString()}</td>
+                                <td>{d.survivalRate !== undefined ? `${(d.survivalRate * 100).toFixed(2)}%` : '—'}</td>
+                                <td>{d.cumulativeSurvival !== undefined ? `${(d.cumulativeSurvival * 100).toFixed(2)}%` : '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className={styles.noData}>
+                        <p>No cohort data available for the selected birth year.</p>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Median Age Progression View */}
+          {resultView === 'median-age' && workspace.projection.populationByYear && (
+            <div className={styles.medianAgeView}>
+              {(() => {
+                const medianData = calculateMedianAgeProgression(workspace.projection.populationByYear!);
+                const latestData = medianData[medianData.length - 1];
+                const firstData = medianData[0];
+                const totalChange = latestData && firstData 
+                  ? latestData.medianAge - firstData.medianAge 
+                  : 0;
+                
+                return (
+                  <>
+                    <div className={styles.medianAgeSummary}>
+                      <div className={styles.medianCard}>
+                        <div className={styles.medianCardTitle}>Current Median Age</div>
+                        <div className={styles.medianCardValue}>{latestData?.medianAge.toFixed(1)}</div>
+                        <div className={styles.medianCardLabel}>Year {latestData?.year}</div>
+                      </div>
+                      <div className={styles.medianCard}>
+                        <div className={styles.medianCardTitle}>Male Median</div>
+                        <div className={styles.medianCardValue}>{latestData?.medianAgeMale.toFixed(1)}</div>
+                        <div className={styles.medianCardLabel}>years</div>
+                      </div>
+                      <div className={styles.medianCard}>
+                        <div className={styles.medianCardTitle}>Female Median</div>
+                        <div className={styles.medianCardValue}>{latestData?.medianAgeFemale.toFixed(1)}</div>
+                        <div className={styles.medianCardLabel}>years</div>
+                      </div>
+                      <div className={styles.medianCard + (totalChange > 0 ? ' ' + styles.aging : '')}>
+                        <div className={styles.medianCardTitle}>Total Change</div>
+                        <div className={styles.medianCardValue}>
+                          {totalChange > 0 ? '+' : ''}{totalChange.toFixed(1)}
+                        </div>
+                        <div className={styles.medianCardLabel}>
+                          {firstData?.year} → {latestData?.year}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {chartType === 'median-age-chart' ? (
+                      <div className={styles.chartContainer}>
+                        <ErrorBoundary fallback={<div className={styles.chartError}>Failed to load chart</div>}>
+                          <Suspense fallback={<div className={styles.chartLoading}>Loading chart...</div>}>
+                            <MedianAgeChart data={medianData} />
+                          </Suspense>
+                        </ErrorBoundary>
+                      </div>
+                    ) : (
+                      <div className={styles.tableWrapper}>
+                        <table className={styles.resultsTable}>
+                          <thead>
+                            <tr>
+                              <th>Year</th>
+                              <th>Median Age</th>
+                              <th>Male Median</th>
+                              <th>Female Median</th>
+                              <th>Change</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {medianData.map(d => (
+                              <tr key={d.year}>
+                                <td>{d.year}</td>
+                                <td><strong>{d.medianAge.toFixed(1)}</strong></td>
+                                <td>{d.medianAgeMale.toFixed(1)}</td>
+                                <td>{d.medianAgeFemale.toFixed(1)}</td>
+                                <td>
+                                  {d.change !== undefined 
+                                    ? <span className={d.change > 0 ? styles.aging : styles.younging}>
+                                        {d.change > 0 ? '+' : ''}{d.change.toFixed(2)}
+                                      </span>
+                                    : '—'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Life Table View */}
+          {resultView === 'life-table' && workspace.data.mortality && (
+            <div className={styles.lifeTableView}>
+              {(() => {
+                // Convert mortality data to life table format
+                const mortalityRates = workspace.data.mortality.map(row => ({
+                  age: row.age,
+                  qx: (row.male + row.female) / 2, // Average of male/female rates
+                }));
+                
+                const lifeTable = calculateLifeTable(mortalityRates);
+                const e0 = lifeTable[0]?.ex ?? 0;
+                const e65 = lifeTable.find(r => r.age === 65)?.ex ?? 0;
+                
+                return (
+                  <>
+                    <div className={styles.lifeTableSummary}>
+                      <div className={styles.lifeCard}>
+                        <div className={styles.lifeCardTitle}>Life Expectancy at Birth</div>
+                        <div className={styles.lifeCardValue}>{e0.toFixed(1)}</div>
+                        <div className={styles.lifeCardLabel}>years (e₀)</div>
+                      </div>
+                      <div className={styles.lifeCard}>
+                        <div className={styles.lifeCardTitle}>Life Expectancy at 65</div>
+                        <div className={styles.lifeCardValue}>{e65.toFixed(1)}</div>
+                        <div className={styles.lifeCardLabel}>years remaining (e₆₅)</div>
+                      </div>
+                      <div className={styles.lifeCard}>
+                        <div className={styles.lifeCardTitle}>Survival to 65</div>
+                        <div className={styles.lifeCardValue}>
+                          {((lifeTable.find(r => r.age === 65)?.lx ?? 0) / 1000).toFixed(1)}%
+                        </div>
+                        <div className={styles.lifeCardLabel}>of birth cohort</div>
+                      </div>
+                    </div>
+                    
+                    <div className={styles.tableWrapper}>
+                      <table className={styles.resultsTable}>
+                        <thead>
+                          <tr>
+                            <th>Age (x)</th>
+                            <th>qₓ</th>
+                            <th>lₓ</th>
+                            <th>dₓ</th>
+                            <th>Lₓ</th>
+                            <th>Tₓ</th>
+                            <th>eₓ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lifeTable.map(row => (
+                            <tr key={row.age}>
+                              <td>{row.age}</td>
+                              <td>{(row.qx * 1000).toFixed(2)}‰</td>
+                              <td>{row.lx.toLocaleString()}</td>
+                              <td>{row.dx.toLocaleString()}</td>
+                              <td>{Math.round(row.Lx).toLocaleString()}</td>
+                              <td>{Math.round(row.Tx).toLocaleString()}</td>
+                              <td><strong>{row.ex.toFixed(1)}</strong></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    <div className={styles.lifeTableNote}>
+                      <p><strong>Legend:</strong> qₓ = probability of dying, lₓ = survivors, dₓ = deaths, Lₓ = person-years lived, Tₓ = total person-years above age x, eₓ = life expectancy</p>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
+          {resultView === 'life-table' && !workspace.data.mortality && (
+            <div className={styles.noData}>
+              <p>Mortality data is required to generate a life table. Please import mortality data first.</p>
             </div>
           )}
         </section>

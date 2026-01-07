@@ -276,12 +276,12 @@ Popula/
   - Adjustable animation speed
 
 **Test Coverage:**
-- TypeScript: 75 tests passing (shared-types + web)
+- TypeScript: 97 tests passing (shared-types + web)
 - Rust: 46 tests passing (CCM + handlers + storage)
-- Total: **121 tests**
+- Total: **143 tests**
 
 **In Progress:**
-- [ ] Additional result views (Sex Ratio, Cohort Tracking, Median Age, Life Table)
+- [ ] Shock modifier integration with CCM
 
 **Pending:**
 - [ ] Shock modifier integration with CCM
@@ -376,6 +376,10 @@ For each year t → t+1:
 | Population Pyramid | Age-sex distribution for a selected year | Horizontal bar (pyramid) |
 | Age Group Summary | Policy-relevant age brackets (0-14, 15-24, etc.) | Stacked bar chart |
 | Dependency Ratios | Youth, old-age, total dependency over time | Multi-line chart |
+| Sex Ratio Analysis | Males per 100 females by age group | Multi-line chart |
+| Cohort Tracking | Follow a birth cohort through time | Table only |
+| Median Age Progression | Median age trends over projection | Multi-line chart |
+| Life Table | Period life expectancy from mortality data | Table only |
 
 ## Notes
 
@@ -395,7 +399,7 @@ For each year t → t+1:
 4. ~~Create sample dataset (Humania)~~ ✅
 5. ~~Wire CCM to NATS (real projections)~~ ✅
 6. ~~Build visualizations (Vega charts)~~ ✅
-7. Add more result views (Sex Ratio, Cohort Tracking, Median Age, Life Table)
+7. ~~Add more result views (Sex Ratio, Cohort Tracking, Median Age, Life Table)~~ ✅
 8. Add shock modifiers (pandemics, wars, crises)
 9. Export results to CSV/Excel
 10. Multi-region support
