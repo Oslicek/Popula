@@ -1,187 +1,186 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import { GeoJsonLayer } from '@deck.gl/layers';
 import type { Feature, Geometry } from 'geojson';
-import { reprojectFeatureCollection27700ToWgs84 } from './reprojection';
-import {
-  augmentFeaturesWithPopulation,
-  createPopulationColorScale,
-  getLastYearFromCsv,
-  parsePopulationCsvByYear,
-  precomputePopulationByYear
-} from './populationData';
-import type { RegionProperties } from './types';
-import styles from './Map.module.css';
-import { DENSITY_COLORS, REGION_FILL_COLOR, REGION_HOVER_COLOR, REGION_LINE_COLOR } from './constants';
+import { createPopulationColorScale } from '../Map/populationData';
+import { DENSITY_COLORS, REGION_FILL_COLOR, REGION_HOVER_COLOR, REGION_LINE_COLOR } from '../Map/constants';
+import { reprojectFeatureCollection5514ToWgs84 } from './reprojectionCz';
+import { parseCzPopulationCsvByYear, precomputeCzPopulationByYear, augmentCzFeatures } from './czPopulationData';
+import { parseVfrGmlToGeoJSON } from './vfrToGeojson';
+import { filterFeaturesByZoom } from './zoomFiltering';
+import { filterFeaturesByViewport, type BBox } from './viewportFiltering';
+import type { RegionProperties } from '../Map/types';
+import styles from '../Map/Map.module.css';
 
-// UK Local Authority GeoJSON path
-const UK_REGIONS_URL = '/sample-data/uk-local-authorities.geojson';
-const UK_POPULATION_CSV_URL = '/sample-data/2022 SNPP Population persons.csv';
+const CZ_GEOJSON_URL = '/sample-data/cz-zsj.geojson';
+const CZ_POP_CSV_URL = '/sample-data/sldb2021_obyv_byt_zsj.csv';
+const CZ_GML_FALLBACK = '/sample-data/20260107_ST_ZKSG.xml';
 
-export function Map() {
+const isLikelyWgs84 = (coord: [number, number]) => Math.abs(coord[0]) <= 180 && Math.abs(coord[1]) <= 90;
+
+export function CzMap() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const deckOverlay = useRef<MapboxOverlay | null>(null);
-  const [lng, setLng] = useState(-2.5); // UK center longitude
-  const [lat, setLat] = useState(54.5); // UK center latitude
-  const [zoom, setZoom] = useState(5.5);
+
+  const [lng, setLng] = useState(15.3);
+  const [lat, setLat] = useState(49.8);
+  const [zoom, setZoom] = useState(6);
+  const [viewportBBox, setViewportBBox] = useState<BBox>({ west: 12, south: 48, east: 19, north: 51 });
   const [basemapVisible, setBasemapVisible] = useState(true);
   const [overlayVisible, setOverlayVisible] = useState(true);
   const [mapReady, setMapReady] = useState(false);
+
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
+  const [hoverInfo, setHoverInfo] = useState<{ name: string; population: number | null; density: number | null; areaSqKm: number | null } | null>(null);
+
   const [regionsData, setRegionsData] = useState<Feature<Geometry, RegionProperties>[] | null>(null);
   const [regionsLoading, setRegionsLoading] = useState(true);
   const [regionsError, setRegionsError] = useState<string | null>(null);
-  const [populationByCode, setPopulationByCode] = useState<Map<string, number> | null>(null);
+
   const [populationByYear, setPopulationByYear] = useState<Map<string, Map<string, number>> | null>(null);
-  const [populationLoading, setPopulationLoading] = useState(true);
-  const [populationError, setPopulationError] = useState<string | null>(null);
-  const [populationYear, setPopulationYear] = useState<string | null>(null);
   const [populationYears, setPopulationYears] = useState<string[]>([]);
+  const [populationYear, setPopulationYear] = useState<string | null>(null);
+  const [populationError, setPopulationError] = useState<string | null>(null);
+
   const [perYearFeatures, setPerYearFeatures] = useState<Map<string, Feature<Geometry, RegionProperties>[]>>(new globalThis.Map());
   const [layerFeatures, setLayerFeatures] = useState<Feature<Geometry, RegionProperties>[] | null>(null);
-  const [hoverInfo, setHoverInfo] = useState<{ name: string; population: number | null; density: number | null; areaSqKm: number | null } | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [animationSpeed, setAnimationSpeed] = useState(500);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Load GeoJSON data
+  // Load CZ GeoJSON (expect preconverted; otherwise show guidance)
   useEffect(() => {
-    fetch(UK_REGIONS_URL)
-      .then(response => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-      })
-      .then(data => {
-        const converted = reprojectFeatureCollection27700ToWgs84(data);
+    const loadGeo = async () => {
+      try {
+        const res = await fetch(CZ_GEOJSON_URL);
+        if (!res.ok) {
+          throw new Error(`GeoJSON not found (${res.status}). Please upload a VFR XML file using the "📂 Upload VFR (XML)" button below.`);
+        }
+        
+        // Check content type before parsing
+        const contentType = res.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Invalid response type. Please upload a VFR XML file using the "📂 Upload VFR (XML)" button below.');
+        }
+        
+        const data = await res.json();
+        const anyFeature = data.features?.[0];
+        let converted = data;
+        const firstCoord: [number, number] | undefined = anyFeature?.geometry?.coordinates?.[0]?.[0]?.[0];
+        if (firstCoord && !isLikelyWgs84(firstCoord)) {
+          converted = reprojectFeatureCollection5514ToWgs84(data);
+        }
         setRegionsData(converted.features);
         setRegionsLoading(false);
-        console.log(`[Map] Loaded ${data.features.length} regions (reprojected to WGS84)`);
-      })
-      .catch(error => {
-        console.error('[Map] Failed to load regions:', error);
-        setRegionsError(error.message);
+      } catch (err: any) {
+        setRegionsError(err.message || 'Failed to load CZ GeoJSON. Please upload a VFR XML file.');
         setRegionsLoading(false);
-      });
+      }
+    };
+    loadGeo();
   }, []);
 
-  // Load population CSV and build lookup
+  // Load population CSV
   useEffect(() => {
-    setPopulationLoading(true);
-    fetch(UK_POPULATION_CSV_URL)
-      .then(response => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.text();
-      })
-      .then(text => {
-        const parsed = parsePopulationCsvByYear(text);
-        const latestYear = getLastYearFromCsv(text) ?? parsed.years[parsed.years.length - 1] ?? '2047';
-        const preferredYear = parsed.years.find((y) => y === '2022') ?? parsed.years[0] ?? latestYear;
+    const loadPop = async () => {
+      try {
+        const res = await fetch(CZ_POP_CSV_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        const parsed = parseCzPopulationCsvByYear(text);
+        const preferredYear = parsed.years.find((y) => y === '2021') ?? parsed.years[parsed.years.length - 1] ?? null;
         setPopulationYears(parsed.years);
         setPopulationYear(preferredYear);
         setPopulationByYear(parsed.byYear);
-        setPopulationLoading(false);
-        console.log(`[Map] Loaded population CSV, default year ${preferredYear}, areas ${map.size}`);
-      })
-      .catch(error => {
-        console.error('[Map] Failed to load population CSV:', error);
-        setPopulationError(error.message);
-        setPopulationLoading(false);
-      });
+      } catch (err: any) {
+        setPopulationError(err.message || 'Failed to load population CSV');
+      }
+    };
+    loadPop();
   }, []);
 
-  // Combine regions with population lookup
+  // Combine regions + population
   useEffect(() => {
     if (!regionsData) return;
     if (!populationByYear) {
-      setLayerFeatures(augmentFeaturesWithPopulation(regionsData, new globalThis.Map()));
+      setLayerFeatures(augmentCzFeatures(regionsData, new globalThis.Map()));
       return;
     }
-
-    const precomputed = precomputePopulationByYear(regionsData, populationByYear, DENSITY_COLORS);
+    const precomputed = precomputeCzPopulationByYear(regionsData, populationByYear, DENSITY_COLORS);
     setPerYearFeatures(precomputed.perYearFeatures);
-
     if (populationYear) {
       const pre = precomputed.perYearFeatures.get(populationYear);
-      if (pre) {
-        setLayerFeatures(pre);
-        const map = populationByYear.get(populationYear) ?? new globalThis.Map();
-        setPopulationByCode(map);
-      }
+      if (pre) setLayerFeatures(pre);
     }
   }, [regionsData, populationByYear, populationYear]);
 
-  const densityColorScale = useMemo(() => {
-    if (!layerFeatures) return null;
-    const densities = layerFeatures.map((f) => f.properties?.density ?? null);
-    const scale = createPopulationColorScale(densities, DENSITY_COLORS);
-    // #region agent log
-    const numericDensities = densities.filter((v): v is number => Number.isFinite(v as number)).sort((a, b) => a - b);
-    const bucketCount = DENSITY_COLORS.length;
-    const thresholds: number[] = [];
-    if (numericDensities.length > 0) {
-      for (let i = 1; i < bucketCount; i++) {
-        const idx = Math.min(numericDensities.length - 1, Math.floor((i * numericDensities.length) / bucketCount));
-        thresholds.push(numericDensities[idx]);
-      }
-    }
-    const sampleValues = numericDensities.length
-      ? [
-          numericDensities[0],
-          numericDensities[Math.floor(numericDensities.length / 4)] ?? null,
-          numericDensities[Math.floor(numericDensities.length / 2)] ?? null,
-          numericDensities[Math.floor((3 * numericDensities.length) / 4)] ?? null,
-          numericDensities[numericDensities.length - 1]
-        ]
-      : [];
-    fetch('http://127.0.0.1:7244/ingest/077d060f-f64b-4665-8ffb-d4911617c6a2', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: 'debug-session',
-        runId: 'pre-fix2',
-        hypothesisId: 'H_scale2',
-        location: 'Map.tsx:densityColorScale',
-        message: 'Scale thresholds and samples',
-        data: {
-          densitiesCount: densities.length,
-          numericCount: numericDensities.length,
-          min: numericDensities[0] ?? null,
-          max: numericDensities[numericDensities.length - 1] ?? null,
-          thresholds,
-          bucketCount,
-          sampleValues
-        },
-        timestamp: Date.now()
-      })
-    }).catch(() => {});
-    // #endregion
-    return scale;
-  }, [layerFeatures]);
-
-  // Animation effect for year slider
+  // Animation
   useEffect(() => {
     if (!isPlaying || populationYears.length === 0 || !populationYear) return;
     const idx = populationYears.indexOf(populationYear);
     const nextIdx = (idx + 1) % populationYears.length;
-    const handle = setTimeout(() => {
-      const nextYear = populationYears[nextIdx];
-      setPopulationYear(nextYear);
-    }, animationSpeed);
+    const handle = setTimeout(() => setPopulationYear(populationYears[nextIdx]), animationSpeed);
     return () => clearTimeout(handle);
   }, [isPlaying, populationYear, populationYears, animationSpeed]);
 
-  // Update population map when year changes
+  // Year change -> swap features
   useEffect(() => {
-    if (!populationYear || !populationByYear) return;
-    const map = populationByYear.get(populationYear) ?? new globalThis.Map();
-    setPopulationByCode(map);
+    if (!populationYear) return;
     const pre = perYearFeatures.get(populationYear);
-    if (pre) {
-      setLayerFeatures(pre);
+    if (pre) setLayerFeatures(pre);
+  }, [populationYear, perYearFeatures]);
+
+  const handleFileUpload = async (file: File) => {
+    try {
+      const text = await file.text();
+      const fc = parseVfrGmlToGeoJSON(text);
+      
+      // Debug logging to understand feature count
+      const uniqueCodes = new Set(fc.features.map(f => f.properties?.uzemi_kod));
+      console.log('[CzMap] Parsed VFR XML:', {
+        totalFeatures: fc.features.length,
+        uniqueCodes: uniqueCodes.size,
+        duplicates: fc.features.length - uniqueCodes.size,
+        sampleCodes: Array.from(uniqueCodes).slice(0, 10)
+      });
+      
+      // Deduplicate by uzemi_kod, keeping the first occurrence
+      const deduped = new Map<string, typeof fc.features[0]>();
+      for (const feature of fc.features) {
+        const code = feature.properties?.uzemi_kod;
+        if (code && !deduped.has(code)) {
+          deduped.set(code, feature);
+        }
+      }
+      const dedupedFeatures = Array.from(deduped.values());
+      console.log('[CzMap] After deduplication:', {
+        originalCount: fc.features.length,
+        dedupedCount: dedupedFeatures.length,
+        removed: fc.features.length - dedupedFeatures.length
+      });
+      
+      const converted = reprojectFeatureCollection5514ToWgs84({
+        type: 'FeatureCollection',
+        features: dedupedFeatures
+      });
+      setRegionsData(converted.features);
+      setRegionsError(null);
+      setRegionsLoading(false);
+    } catch (err: any) {
+      setRegionsError(err.message || 'Failed to convert VFR file');
     }
-  }, [populationYear, populationByYear]);
+  };
+
+  const onUploadClick = () => fileInputRef.current?.click();
+
+  const densityColorScale = useMemo(() => {
+    if (!layerFeatures) return null;
+    const densities = layerFeatures.map((f) => f.properties?.density ?? null);
+    return createPopulationColorScale(densities, DENSITY_COLORS);
+  }, [layerFeatures]);
 
   const summary = useMemo(() => {
     if (!layerFeatures) return null;
@@ -191,9 +190,7 @@ export function Map() {
       .map((f) => f.properties?.density)
       .filter((v): v is number => Number.isFinite(v as number))
       .sort((a, b) => a - b);
-    if (densities.length === 0) {
-      return { withData: withData.length, withoutData, min: null, median: null, max: null };
-    }
+    if (!densities.length) return { withData: withData.length, withoutData, min: null, median: null, max: null };
     const min = densities[0];
     const max = densities[densities.length - 1];
     const mid = Math.floor(densities.length / 2);
@@ -204,25 +201,37 @@ export function Map() {
   const minYear = useMemo(() => (populationYears.length ? Number(populationYears[0]) : null), [populationYears]);
   const maxYear = useMemo(() => (populationYears.length ? Number(populationYears[populationYears.length - 1]) : null), [populationYears]);
 
-  // Create deck.gl layers
+  // Apply zoom-based and viewport-based filtering to improve performance
+  const filteredFeatures = useMemo(() => {
+    const features = layerFeatures || regionsData;
+    if (!features) return null;
+    
+    // Step 1: Filter by zoom level (by area)
+    const zoomFiltered = filterFeaturesByZoom(features, zoom);
+    
+    // Step 2: Filter by viewport (only at zoom >= 9 to reduce CPU overhead)
+    const viewportFiltered = filterFeaturesByViewport(zoomFiltered, viewportBBox, zoom);
+    
+    console.log(`[CzMap] Zoom ${zoom.toFixed(1)}: ${viewportFiltered.length}/${features.length} features (zoom: ${zoomFiltered.length}, viewport: ${viewportFiltered.length})`);
+    return viewportFiltered;
+  }, [layerFeatures, regionsData, zoom, viewportBBox]);
+
   const getLayers = useCallback(() => {
     if (!overlayVisible) return [];
-    const data = layerFeatures || regionsData;
-    if (!data) return [];
-
+    if (!filteredFeatures) return [];
     return [
       new GeoJsonLayer<RegionProperties>({
-        id: 'uk-regions',
-        data,
+        id: 'cz-regions',
+        data: filteredFeatures,
         pickable: true,
         stroked: true,
         filled: true,
         extruded: false,
         opacity: 0.85,
         lineWidthUnits: 'pixels',
-        lineWidthMinPixels: 1.2,
+        lineWidthMinPixels: 1.0,
         getFillColor: (d: Feature<Geometry, RegionProperties>) => {
-            const name = d.properties?.LAD23NM || '';
+          const name = (d.properties as any)?.uzemi_txt || '';
           const density = (d.properties as any)?.density ?? null;
           const hasData = (d.properties as any)?.hasPopulationData;
           const baseColor =
@@ -231,38 +240,16 @@ export function Map() {
               : hasData
               ? REGION_FILL_COLOR
               : [180, 180, 180, 120];
-          // #region agent log
-          if ((d.properties as any)?.LAD23CD && Math.random() < 0.02) {
-            fetch('http://127.0.0.1:7244/ingest/077d060f-f64b-4665-8ffb-d4911617c6a2', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                sessionId: 'debug-session',
-                runId: 'pre-fix1',
-                hypothesisId: 'H_fill',
-                location: 'Map.tsx:getFillColor',
-                message: 'Fill color assignment sample',
-                data: {
-                  code: (d.properties as any)?.LAD23CD,
-                  density,
-                  hasData,
-                  color: baseColor
-                },
-                timestamp: Date.now()
-              })
-            }).catch(() => {});
-          }
-          // #endregion
-            return name === hoveredRegion ? REGION_HOVER_COLOR : (baseColor as [number, number, number, number]);
+          return name === hoveredRegion ? REGION_HOVER_COLOR : (baseColor as [number, number, number, number]);
         },
         getLineColor: REGION_LINE_COLOR,
-        getLineWidth: 1.2,
+        getLineWidth: 1.0,
         onHover: (info) => {
           if (info.object) {
             const props = (info.object as Feature<Geometry, RegionProperties>).properties;
-            setHoveredRegion(props?.LAD23NM || null);
+            setHoveredRegion((props as any)?.uzemi_txt || null);
             setHoverInfo({
-              name: props?.LAD23NM || '',
+              name: (props as any)?.uzemi_txt || '',
               population: (props as any)?.population ?? null,
               density: (props as any)?.density ?? null,
               areaSqKm: (props as any)?.areaSqKm ?? null
@@ -272,17 +259,14 @@ export function Map() {
             setHoverInfo(null);
           }
         },
-        updateTriggers: {
-          getFillColor: [hoveredRegion, densityColorScale, layerFeatures]
-        }
+        updateTriggers: { getFillColor: [hoveredRegion, densityColorScale, layerFeatures] }
       })
     ];
-  }, [overlayVisible, layerFeatures, hoveredRegion, densityColorScale, regionsData]);
+  }, [overlayVisible, filteredFeatures, densityColorScale, hoveredRegion]);
 
   // Initialize map
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
-
     map.current = new maplibregl.Map({
       container: mapContainer.current,
       style: {
@@ -290,9 +274,7 @@ export function Map() {
         sources: {
           'osm-tiles': {
             type: 'raster',
-            tiles: [
-              'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-            ],
+            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
             tileSize: 256,
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           }
@@ -308,66 +290,31 @@ export function Map() {
         ]
       },
       center: [lng, lat],
-      zoom: zoom
+      zoom
     });
 
-    map.current.on('load', () => {
-      setMapReady(true);
-    });
+    map.current.on('load', () => setMapReady(true));
 
-    // Initialize deck.gl overlay
-    deckOverlay.current = new MapboxOverlay({
-      layers: []
-    });
+    deckOverlay.current = new MapboxOverlay({ layers: [] });
     map.current.addControl(deckOverlay.current as unknown as maplibregl.IControl);
+    map.current.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true }), 'top-right');
+    map.current.addControl(new maplibregl.ScaleControl({ maxWidth: 200, unit: 'metric' }), 'bottom-left');
 
-    // Add navigation controls (zoom + rotation)
-    map.current.addControl(
-      new maplibregl.NavigationControl({
-        visualizePitch: true,
-        showCompass: true,
-        showZoom: true
-      }),
-      'top-right'
-    );
-
-    // Add scale control
-    map.current.addControl(
-      new maplibregl.ScaleControl({
-        maxWidth: 200,
-        unit: 'metric'
-      }),
-      'bottom-left'
-    );
-
-    // Add fullscreen control
-    map.current.addControl(
-      new maplibregl.FullscreenControl(),
-      'top-right'
-    );
-
-    // Add geolocate control
-    map.current.addControl(
-      new maplibregl.GeolocateControl({
-        positionOptions: {
-          enableHighAccuracy: true
-        },
-        trackUserLocation: true,
-        showUserHeading: true
-      }),
-      'top-right'
-    );
-
-    // Update state when map moves
     map.current.on('move', () => {
       if (!map.current) return;
       const center = map.current.getCenter();
+      const bounds = map.current.getBounds();
       setLng(parseFloat(center.lng.toFixed(4)));
       setLat(parseFloat(center.lat.toFixed(4)));
       setZoom(parseFloat(map.current.getZoom().toFixed(2)));
+      setViewportBBox({
+        west: bounds.getWest(),
+        south: bounds.getSouth(),
+        east: bounds.getEast(),
+        north: bounds.getNorth()
+      });
     });
 
-    // Cleanup on unmount
     return () => {
       if (map.current) {
         map.current.remove();
@@ -376,29 +323,25 @@ export function Map() {
     };
   }, []);
 
-  // Update deck.gl layers when data or hover state changes
+  // Update deck layers
   useEffect(() => {
     if (deckOverlay.current) {
       deckOverlay.current.setProps({ layers: getLayers() });
     }
   }, [getLayers]);
 
-  // Toggle basemap visibility
+  // Basemap visibility
   useEffect(() => {
     if (!map.current) return;
     const applyVisibility = () => {
       try {
         map.current?.setLayoutProperty('osm-tiles-layer', 'visibility', basemapVisible ? 'visible' : 'none');
       } catch (err) {
-        // If style isn't ready yet, wait for load
         if (map.current) {
-          map.current.once('load', () => {
-            map.current?.setLayoutProperty('osm-tiles-layer', 'visibility', basemapVisible ? 'visible' : 'none');
-          });
+          map.current.once('load', () => map.current?.setLayoutProperty('osm-tiles-layer', 'visibility', basemapVisible ? 'visible' : 'none'));
         }
       }
     };
-
     if (mapReady && map.current.isStyleLoaded()) {
       applyVisibility();
     } else if (map.current) {
@@ -409,10 +352,10 @@ export function Map() {
   return (
     <div className={styles.mapPage}>
       <div className={styles.header}>
-        <h1>🗺️ Geographic Data</h1>
-        <p>Explore demographic data on the map</p>
+        <h1>🗺️ Czech Microregions (ZSJ)</h1>
+        <p>Census 2021 population by základní sídelní jednotka</p>
       </div>
-      
+
       <div className={styles.infoBar}>
         <span className={styles.coord}>
           <strong>Longitude:</strong> {lng}°
@@ -423,11 +366,7 @@ export function Map() {
         <span className={styles.coord}>
           <strong>Zoom:</strong> {zoom}
         </span>
-        {regionsLoading && (
-          <span className={styles.coord}>
-            <strong>Regions:</strong> Loading...
-          </span>
-        )}
+        {regionsLoading && <span className={styles.coord}><strong>Regions:</strong> Loading...</span>}
         {regionsError && (
           <span className={styles.coordError}>
             <strong>Error:</strong> {regionsError}
@@ -435,17 +374,12 @@ export function Map() {
         )}
         {regionsData && (
           <span className={styles.coord}>
-            <strong>Regions:</strong> {regionsData.length}
+            <strong>Regions:</strong> {filteredFeatures?.length ?? 0} / {regionsData.length} (zoom filtered)
           </span>
         )}
         {populationYear && (
           <span className={styles.coord}>
             <strong>Population year:</strong> {populationYear}
-          </span>
-        )}
-        {populationLoading && (
-          <span className={styles.coord}>
-            <strong>Population:</strong> Loading...
           </span>
         )}
         {populationError && (
@@ -501,33 +435,32 @@ export function Map() {
 
       <div className={styles.infoBar} style={{ marginTop: 'var(--space-2)' }}>
         <label className={styles.coord}>
-          <input
-            type="checkbox"
-            checked={basemapVisible}
-            onChange={(e) => setBasemapVisible(e.target.checked)}
-          />
+          <input type="checkbox" checked={basemapVisible} onChange={(e) => setBasemapVisible(e.target.checked)} />
           <span><strong>Basemap</strong> (OSM tiles)</span>
         </label>
         <label className={styles.coord}>
-          <input
-            type="checkbox"
-            checked={overlayVisible}
-            onChange={(e) => setOverlayVisible(e.target.checked)}
-          />
-          <span><strong>Regions overlay</strong> (deck.gl)</span>
+          <input type="checkbox" checked={overlayVisible} onChange={(e) => setOverlayVisible(e.target.checked)} />
+          <span><strong>ZSJ overlay</strong> (deck.gl)</span>
         </label>
+        <button className={styles.playButton} onClick={onUploadClick} style={{ width: 'auto', padding: '0 12px' }}>
+          📂 Upload VFR (XML)
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xml,.gml"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFileUpload(file);
+          }}
+        />
       </div>
-      
+
       {hoverInfo && (
         <div className={styles.tooltip}>
           <strong>📍 {hoverInfo.name}</strong>
-          <div>
-            {hoverInfo.population !== null ? (
-              <>Population: {Math.round(hoverInfo.population).toLocaleString()}</>
-            ) : (
-              <>Population: No data</>
-            )}
-          </div>
+          <div>{hoverInfo.population !== null ? <>Population: {Math.round(hoverInfo.population).toLocaleString()}</> : <>Population: No data</>}</div>
           <div>
             {hoverInfo.density !== null && hoverInfo.areaSqKm ? (
               <>Density: {Math.round(hoverInfo.density).toLocaleString()} / km²</>
@@ -535,14 +468,10 @@ export function Map() {
               <>Density: No data</>
             )}
           </div>
-          {hoverInfo.areaSqKm ? (
-            <div>Area: {hoverInfo.areaSqKm.toFixed(2)} km²</div>
-          ) : (
-            <div>Area: n/a</div>
-          )}
+          {hoverInfo.areaSqKm ? <div>Area: {hoverInfo.areaSqKm.toFixed(2)} km²</div> : <div>Area: n/a</div>}
         </div>
       )}
-      
+
       <div className={styles.mapWrapper}>
         <div ref={mapContainer} className={styles.mapContainer} />
       </div>
@@ -561,21 +490,15 @@ export function Map() {
             </div>
             <div className={styles.summaryItem}>
               <div className={styles.summaryLabel}>Min density</div>
-              <div className={styles.summaryValue}>
-                {summary.min !== null ? `${Math.round(summary.min).toLocaleString()} / km²` : 'n/a'}
-              </div>
+              <div className={styles.summaryValue}>{summary.min !== null ? `${Math.round(summary.min).toLocaleString()} / km²` : 'n/a'}</div>
             </div>
             <div className={styles.summaryItem}>
               <div className={styles.summaryLabel}>Median density</div>
-              <div className={styles.summaryValue}>
-                {summary.median !== null ? `${Math.round(summary.median).toLocaleString()} / km²` : 'n/a'}
-              </div>
+              <div className={styles.summaryValue}>{summary.median !== null ? `${Math.round(summary.median).toLocaleString()} / km²` : 'n/a'}</div>
             </div>
             <div className={styles.summaryItem}>
               <div className={styles.summaryLabel}>Max density</div>
-              <div className={styles.summaryValue}>
-                {summary.max !== null ? `${Math.round(summary.max).toLocaleString()} / km²` : 'n/a'}
-              </div>
+              <div className={styles.summaryValue}>{summary.max !== null ? `${Math.round(summary.max).toLocaleString()} / km²` : 'n/a'}</div>
             </div>
             {populationYear && (
               <div className={styles.summaryItem}>
@@ -602,11 +525,11 @@ export function Map() {
           </div>
           <div className={styles.legendRow}>
             <span className={styles.legendSwatch} style={{ background: 'rgba(180,180,180,0.5)' }} />
-            <span className={styles.legendLabel}>No data (Scotland / Northern Ireland)</span>
+            <span className={styles.legendLabel}>No data</span>
           </div>
         </div>
       </div>
-      
+
       <div className={styles.instructions}>
         <h3>Navigation</h3>
         <ul>

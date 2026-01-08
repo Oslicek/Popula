@@ -86,10 +86,19 @@ const computeQuantileThresholds = (values: number[], bucketCount: number): numbe
 /**
  * Precompute population, density, and colors per year for fast switching.
  */
+type AugmentOptions = {
+  codeProp?: string;
+  colorProp?: string;
+  populationProp?: string;
+  densityProp?: string;
+  hasPopulationDataProp?: string;
+};
+
 export function precomputePopulationByYear(
   features: Feature<Geometry, RegionProperties>[],
   populationByYear: Map<string, Map<string, number>>,
-  colorsPalette: [number, number, number, number][]
+  colorsPalette: [number, number, number, number][],
+  options: AugmentOptions = {}
 ): {
   perYearFeatures: Map<string, Feature<Geometry, RegionProperties>[]>;
   thresholds: Map<string, number[]>;
@@ -98,10 +107,11 @@ export function precomputePopulationByYear(
   const thresholdsMap = new Map<string, number[]>();
   const augmentedByYear = new Map<string, Feature<Geometry, RegionProperties>[]>();
   const allDensities: number[] = [];
+  const colorProp = options.colorProp ?? 'color';
 
   // First pass: augment per year and collect all densities
   for (const [year, popMap] of populationByYear.entries()) {
-    const augmented = augmentFeaturesWithPopulation(features, popMap);
+    const augmented = augmentFeaturesWithPopulation(features, popMap, options);
     augmentedByYear.set(year, augmented);
     for (const f of augmented) {
       const d = f.properties?.density;
@@ -123,7 +133,7 @@ export function precomputePopulationByYear(
         ...f,
         properties: {
           ...f.properties,
-          color
+          [colorProp]: color
         }
       };
     });
@@ -160,10 +170,16 @@ export function precomputePopulationByYear(
  */
 export function augmentFeaturesWithPopulation(
   features: Feature<Geometry, RegionProperties>[],
-  populationByCode: Map<string, number>
+  populationByCode: Map<string, number>,
+  options: AugmentOptions = {}
 ): Feature<Geometry, RegionProperties>[] {
+  const codeProp = options.codeProp ?? 'LAD23CD';
+  const populationProp = options.populationProp ?? 'population';
+  const densityProp = options.densityProp ?? 'density';
+  const hasDataProp = options.hasPopulationDataProp ?? 'hasPopulationData';
+
   return features.map((f) => {
-    const code = f.properties?.LAD23CD;
+    const code = (f.properties as any)?.[codeProp] as string | undefined;
     const population = code ? populationByCode.get(code) ?? null : null;
     const areaSqKm = f.properties?.areaSqKm ?? null;
     const density =
@@ -174,9 +190,9 @@ export function augmentFeaturesWithPopulation(
       ...f,
       properties: {
         ...f.properties,
-        population,
-        density,
-        hasPopulationData: population !== null
+        [populationProp]: population,
+        [densityProp]: density,
+        [hasDataProp]: population !== null
       }
     };
   });

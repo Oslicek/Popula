@@ -32,6 +32,12 @@ export function Header() {
           >
             🗺️ Map
           </Link>
+          <Link 
+            to="/map-cz" 
+            className={`${styles.navLink} ${isActive('/map-cz') ? styles.active : ''}`}
+          >
+            🗺️ CZ Map
+          </Link>
         </nav>
       </div>
     </header>
