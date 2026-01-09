@@ -1,6 +1,6 @@
 # Project Context
 
-> **Last Updated:** 2026-01-08 (v0.3.2)
+> **Last Updated:** 2026-01-09 (v0.3.3)
 
 ## Overview
 
@@ -150,7 +150,8 @@ Popula/
 │       │   │   ├── useNats.ts      # NATS connection hook
 │       │   │   └── useProjection.ts # Projection subscription
 │       │   ├── services/
-│       │   │   ├── nats.ts         # NATS WebSocket service
+│       │   │   ├── nats.ts         # NATS WebSocket service (chunked encoding)
+│       │   │   ├── geoService.ts   # Rust worker geo processing client ✅
 │       │   │   └── csvParser.ts    # CSV import parser ✅
 │       │   ├── utils/
 │       │   │   ├── demographicCalculations.ts  # Calculation utilities ✅
@@ -182,6 +183,7 @@ Popula/
 │       └── src/
 │           ├── demographic.ts      # Cohort, Population, etc.
 │           ├── messages.ts         # NATS message envelopes ✅
+│           ├── geo.ts              # Geo processing message types ✅
 │           ├── scenario.ts
 │           ├── shock.ts            # Shock types & helpers
 │           ├── workspace.ts        # Workspace types ✅
@@ -195,12 +197,20 @@ Popula/
 │   │   │   ├── types.rs            # Rust demographic types
 │   │   │   ├── ccm.rs              # CCM implementation ✅
 │   │   │   ├── ccm_tests.rs        # CCM unit tests ✅
-│   │   │   └── projection.rs
+│   │   │   ├── projection.rs
+│   │   │   └── geo/                # Geographic processing ✅
+│   │   │       ├── mod.rs
+│   │   │       ├── vfr_parser.rs   # VFR GML XML parser (quick-xml)
+│   │   │       └── area_calc.rs    # Polygon area calculation
 │   │   ├── handlers/
 │   │   │   ├── mod.rs
 │   │   │   ├── ping.rs             # Ping/pong demo handler ✅
 │   │   │   ├── projection_handler.rs # Projection handler ✅
+│   │   │   ├── geo_handler.rs      # VFR XML processing handler ✅
 │   │   │   └── scenario.rs
+│   │   ├── types/
+│   │   │   ├── mod.rs
+│   │   │   └── geo.rs              # Geo message types
 │   │   └── storage/
 │   │       ├── mod.rs
 │   │       ├── traits.rs
@@ -227,13 +237,15 @@ Popula/
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
-| `NatsService` | apps/web/src/services/ | NATS WebSocket client |
+| `NatsService` | apps/web/src/services/ | NATS WebSocket client (chunked encoding for large payloads) |
+| `GeoService` | apps/web/src/services/ | Rust worker geo processing client |
 | `csvParser` | apps/web/src/services/ | CSV file parsing for imports |
 | `useNatsStore` | apps/web/src/stores/ | Connection state + projection |
 | `useWorkspaceStore` | apps/web/src/stores/ | Workspace management (Zustand) |
 | `Workspace` | apps/web/src/pages/ | Workspace UI with data import |
 | `PingHandler` | worker/src/handlers/ | Demo request/reply handler |
 | `ProjectionHandler` | worker/src/handlers/ | Run CCM projections via NATS |
+| `GeoHandler` | worker/src/handlers/ | VFR XML processing via NATS |
 | `CohortComponentModel` | worker/src/engine/ccm.rs | CCM implementation |
 | `ScenarioHandler` | worker/src/handlers/ | Process scenario messages |
 | `Storage` | worker/src/storage/ | DB-agnostic persistence |
@@ -315,6 +327,12 @@ Popula/
     - Viewport-based filtering: Only process features visible in current view (zoom ≥ 9)
     - Cached sorting: Sort once, slice on zoom changes (O(1) instead of O(n log n))
     - Fast bbox calculation: Optimized geometry bounds checking
+  - **Rust worker geo processing** (Phase 1):
+    - VFR GML XML parsing in Rust (quick-xml) for 340MB+ files
+    - Polygon area calculation in Rust (geo crate)
+    - Chunked JSON encoding in frontend to avoid memory spikes
+    - NATS max payload increased to 500MB for large file transfers
+    - Client-side reprojection (proj4) from S-JTSK to WGS84
 
 **Test Coverage:**
 - TypeScript: 125 tests (124 passed, 1 skipped)
@@ -425,6 +443,7 @@ For each year t → t+1:
 
 - Local development on Windows 11
 - NATS runs as a single binary (auto-installed to ~/.nats/)
+- NATS max_payload configured to 500MB for large VFR XML files
 - Storage defaults to in-memory for MVP
 - Same code paths for local and production
 - CCM (Cohort-Component Method) is the core algorithm

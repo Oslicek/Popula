@@ -63,6 +63,89 @@ export function createMessage<T>(
   };
 }
 
+/**
+ * Encode JSON to Uint8Array in chunks to avoid memory spike from large strings.
+ * This avoids creating a full intermediate JSON string for large payloads.
+ */
+function encodeJsonToBytes(obj: unknown): Uint8Array {
+  const encoder = new TextEncoder();
+  const chunks: Uint8Array[] = [];
+  
+  function write(str: string): void {
+    chunks.push(encoder.encode(str));
+  }
+  
+  function encodeString(str: string): void {
+    write('"');
+    // Process string in chunks to avoid memory spike during escaping
+    const CHUNK_SIZE = 64 * 1024; // 64KB chunks
+    for (let i = 0; i < str.length; i += CHUNK_SIZE) {
+      const chunk = str.slice(i, Math.min(i + CHUNK_SIZE, str.length));
+      // Escape JSON special characters
+      let escaped = '';
+      for (let j = 0; j < chunk.length; j++) {
+        const c = chunk[j];
+        switch (c) {
+          case '"': escaped += '\\"'; break;
+          case '\\': escaped += '\\\\'; break;
+          case '\n': escaped += '\\n'; break;
+          case '\r': escaped += '\\r'; break;
+          case '\t': escaped += '\\t'; break;
+          default:
+            const code = chunk.charCodeAt(j);
+            if (code < 32) {
+              escaped += '\\u' + code.toString(16).padStart(4, '0');
+            } else {
+              escaped += c;
+            }
+        }
+      }
+      write(escaped);
+    }
+    write('"');
+  }
+  
+  function encodeValue(value: unknown): void {
+    if (value === null || value === undefined) {
+      write('null');
+    } else if (typeof value === 'string') {
+      encodeString(value);
+    } else if (typeof value === 'number') {
+      write(Number.isFinite(value) ? String(value) : 'null');
+    } else if (typeof value === 'boolean') {
+      write(value ? 'true' : 'false');
+    } else if (Array.isArray(value)) {
+      write('[');
+      for (let i = 0; i < value.length; i++) {
+        if (i > 0) write(',');
+        encodeValue(value[i]);
+      }
+      write(']');
+    } else if (typeof value === 'object') {
+      write('{');
+      const entries = Object.entries(value as Record<string, unknown>);
+      for (let i = 0; i < entries.length; i++) {
+        if (i > 0) write(',');
+        write('"' + entries[i][0] + '":');
+        encodeValue(entries[i][1]);
+      }
+      write('}');
+    }
+  }
+  
+  encodeValue(obj);
+  
+  // Concatenate chunks into single Uint8Array
+  const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return result;
+}
+
 // ============================================================
 // NATS SERVICE
 // ============================================================
@@ -183,6 +266,7 @@ export class NatsService {
 
   /**
    * Publish a message to a subject
+   * Uses chunked JSON encoding to avoid memory spike for large payloads
    */
   publish<T>(subject: string, payload: T, correlationId?: string): void {
     if (!this.connection) {
@@ -190,12 +274,14 @@ export class NatsService {
     }
 
     const envelope = createMessage(payload, correlationId);
-    const data = this.sc.encode(JSON.stringify(envelope));
+    // Use chunked encoding to avoid memory spike for large payloads
+    const data = encodeJsonToBytes(envelope);
     this.connection.publish(subject, data);
   }
 
   /**
    * Request-reply pattern
+   * Uses chunked JSON encoding to avoid memory spike for large payloads
    */
   async request<TReq, TRes>(
     subject: string,
@@ -207,7 +293,8 @@ export class NatsService {
     }
 
     const envelope = createMessage(payload);
-    const data = this.sc.encode(JSON.stringify(envelope));
+    // Use chunked encoding to avoid memory spike for large payloads (e.g., 340MB XML)
+    const data = encodeJsonToBytes(envelope);
 
     const response = await this.connection.request(subject, data, { timeout: timeoutMs });
     return JSON.parse(this.sc.decode(response.data)) as MessageEnvelope<TRes>;

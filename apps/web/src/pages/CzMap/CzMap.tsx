@@ -160,19 +160,26 @@ export function CzMap() {
       return;
     }
 
+    const fileSizeMB = file.size / (1024 * 1024);
+    console.log('[CzMap] File size:', fileSizeMB.toFixed(2), 'MB');
+
     setUploadProcessing(true);
     setRegionsError(null);
 
     try {
+      console.log('[CzMap] Reading file...');
+      const readStart = performance.now();
       const xmlContent = await file.text();
-      console.log('[CzMap] Processing VFR XML via Rust worker...');
+      const readTime = performance.now() - readStart;
+      console.log('[CzMap] File read complete in', Math.round(readTime), 'ms');
+      console.log('[CzMap] Sending to Rust worker via NATS (chunked encoding)...');
       
       const startTime = performance.now();
       const response = await geoServiceRef.current.processVfrXml(xmlContent, {
         targetCrs: 'EPSG:4326', // Client expects WGS84
         computeAreas: true,
         deduplicateByProperty: 'uzemi_kod',
-      }, 60000); // 60s timeout for large files
+      }, 180000); // 180s timeout for very large files
       const elapsed = performance.now() - startTime;
       
       console.log('[CzMap] Rust worker processed VFR XML:', {

@@ -1,9 +1,44 @@
 use async_nats::Client;
 use futures::StreamExt;
+use serde::{Deserialize, Serialize};
 use crate::types::{GeoProcessRequest, GeoProcessResponse, GeoProcessError};
 use crate::engine::geo::process_vfr;
 
 const SUBJECT: &str = "popula.geo.process_vfr";
+
+/// Message envelope that wraps all NATS messages from TypeScript client
+#[derive(Debug, Deserialize)]
+struct RequestEnvelope {
+    #[allow(dead_code)]
+    id: String,
+    #[allow(dead_code)]
+    timestamp: String,
+    #[allow(dead_code)]
+    #[serde(rename = "correlationId")]
+    correlation_id: String,
+    payload: GeoProcessRequest,
+}
+
+/// Response envelope to match TypeScript expectations
+#[derive(Debug, Serialize)]
+struct ResponseEnvelope<T> {
+    id: String,
+    timestamp: String,
+    #[serde(rename = "correlationId")]
+    correlation_id: String,
+    payload: T,
+}
+
+impl<T> ResponseEnvelope<T> {
+    fn new(payload: T, correlation_id: String) -> Self {
+        Self {
+            id: uuid::Uuid::new_v4().to_string(),
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            correlation_id,
+            payload,
+        }
+    }
+}
 
 pub async fn handle_geo_processing(client: Client) {
     tracing::info!("Starting geo processing handler on subject: {}", SUBJECT);
@@ -29,8 +64,10 @@ pub async fn handle_geo_processing(client: Client) {
         let client = client.clone();
         tokio::spawn(async move {
             match handle_request(&message.payload).await {
-                Ok(response) => {
-                    let response_json = serde_json::to_vec(&response).unwrap_or_default();
+                Ok((response, correlation_id)) => {
+                    // Wrap response in envelope to match TypeScript expectations
+                    let envelope = ResponseEnvelope::new(response, correlation_id);
+                    let response_json = serde_json::to_vec(&envelope).unwrap_or_default();
                     if let Err(e) = client.publish(reply_subject, response_json.into()).await {
                         tracing::error!("Failed to send response: {}", e);
                     }
@@ -40,7 +77,9 @@ pub async fn handle_geo_processing(client: Client) {
                         error: error_msg.clone(),
                         details: None::<String>,
                     };
-                    let error_json = serde_json::to_vec(&error).unwrap_or_default();
+                    // Also wrap error in envelope
+                    let envelope = ResponseEnvelope::new(error, String::new());
+                    let error_json = serde_json::to_vec(&envelope).unwrap_or_default();
                     if let Err(e) = client.publish(reply_subject, error_json.into()).await {
                         tracing::error!("Failed to send error response: {}", e);
                     }
@@ -51,10 +90,13 @@ pub async fn handle_geo_processing(client: Client) {
     }
 }
 
-async fn handle_request(payload: &[u8]) -> Result<GeoProcessResponse, String> {
-    // Parse request
-    let request: GeoProcessRequest = serde_json::from_slice(payload)
-        .map_err(|e| format!("Failed to parse request: {}", e))?;
+async fn handle_request(payload: &[u8]) -> Result<(GeoProcessResponse, String), String> {
+    // Parse envelope and extract request
+    let envelope: RequestEnvelope = serde_json::from_slice(payload)
+        .map_err(|e| format!("Failed to parse request envelope: {}", e))?;
+    
+    let correlation_id = envelope.correlation_id.clone();
+    let request = envelope.payload;
     
     tracing::info!("Processing VFR XML: {} bytes, target CRS: {}", 
         request.xml_content.len(), request.options.target_crs);
@@ -65,7 +107,7 @@ async fn handle_request(payload: &[u8]) -> Result<GeoProcessResponse, String> {
     tracing::info!("Processed {} features in {}ms", 
         response.metadata.feature_count, response.metadata.processing_time_ms);
     
-    Ok(response)
+    Ok((response, correlation_id))
 }
 
 #[cfg(test)]
