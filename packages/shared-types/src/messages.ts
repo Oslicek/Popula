@@ -44,6 +44,9 @@ export interface ErrorEnvelope {
  * popula.<domain>.events             - Broadcast events
  */
 export const SUBJECTS = {
+  // Geospatial processing
+  GEO_PROCESS_VFR: 'popula.geo.process_vfr',
+  
   // Scenario commands
   SCENARIO_SUBMIT: 'popula.scenario.submit',
   SCENARIO_DELETE: 'popula.scenario.delete',

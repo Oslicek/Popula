@@ -7,6 +7,7 @@
 mod engine;
 mod handlers;
 mod storage;
+mod types;
 
 use anyhow::Result;
 use tracing::{info, error, Level};

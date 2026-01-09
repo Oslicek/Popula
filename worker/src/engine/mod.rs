@@ -5,6 +5,7 @@
 mod types;
 mod projection;
 mod ccm;
+pub mod geo;
 
 #[cfg(test)]
 mod ccm_tests;

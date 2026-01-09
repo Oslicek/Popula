@@ -12,6 +12,8 @@ import { parseVfrGmlToGeoJSON } from './vfrToGeojson';
 import { filterFeaturesByZoom } from './zoomFiltering';
 import { filterFeaturesByViewport, type BBox } from './viewportFiltering';
 import type { RegionProperties } from '../Map/types';
+import { natsService } from '../../services/nats';
+import { GeoService } from '../../services/geo';
 import styles from '../Map/Map.module.css';
 
 const CZ_GEOJSON_URL = '/sample-data/cz-zsj.geojson';
@@ -50,6 +52,25 @@ export function CzMap() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [animationSpeed, setAnimationSpeed] = useState(500);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [natsConnected, setNatsConnected] = useState(false);
+  const [uploadProcessing, setUploadProcessing] = useState(false);
+  const geoServiceRef = useRef<GeoService | null>(null);
+
+  // Connect to NATS and initialize GeoService
+  useEffect(() => {
+    const connectNats = async () => {
+      try {
+        await natsService.connect();
+        setNatsConnected(true);
+        geoServiceRef.current = new GeoService(natsService);
+        console.log('[CzMap] Connected to NATS, GeoService ready');
+      } catch (err) {
+        console.error('[CzMap] Failed to connect to NATS:', err);
+        setNatsConnected(false);
+      }
+    };
+    connectNats();
+  }, []);
 
   // Load CZ GeoJSON (expect preconverted; otherwise show guidance)
   useEffect(() => {
@@ -134,43 +155,50 @@ export function CzMap() {
   }, [populationYear, perYearFeatures]);
 
   const handleFileUpload = async (file: File) => {
+    if (!geoServiceRef.current) {
+      setRegionsError('Geo service not initialized. Please wait for NATS connection.');
+      return;
+    }
+
+    setUploadProcessing(true);
+    setRegionsError(null);
+
     try {
-      const text = await file.text();
-      const fc = parseVfrGmlToGeoJSON(text);
+      const xmlContent = await file.text();
+      console.log('[CzMap] Processing VFR XML via Rust worker...');
       
-      // Debug logging to understand feature count
-      const uniqueCodes = new Set(fc.features.map(f => f.properties?.uzemi_kod));
-      console.log('[CzMap] Parsed VFR XML:', {
-        totalFeatures: fc.features.length,
-        uniqueCodes: uniqueCodes.size,
-        duplicates: fc.features.length - uniqueCodes.size,
-        sampleCodes: Array.from(uniqueCodes).slice(0, 10)
+      const startTime = performance.now();
+      const response = await geoServiceRef.current.processVfrXml(xmlContent, {
+        targetCrs: 'EPSG:4326', // Client expects WGS84
+        computeAreas: true,
+        deduplicateByProperty: 'uzemi_kod',
+      }, 60000); // 60s timeout for large files
+      const elapsed = performance.now() - startTime;
+      
+      console.log('[CzMap] Rust worker processed VFR XML:', {
+        featureCount: response.metadata.featureCount,
+        duplicatesRemoved: response.metadata.duplicatesRemoved ?? 0,
+        processingTimeMs: response.metadata.processingTimeMs,
+        totalTimeMs: Math.round(elapsed),
+        bbox: response.metadata.bbox,
       });
       
-      // Deduplicate by uzemi_kod, keeping the first occurrence
-      const deduped = new Map<string, typeof fc.features[0]>();
-      for (const feature of fc.features) {
-        const code = feature.properties?.uzemi_kod;
-        if (code && !deduped.has(code)) {
-          deduped.set(code, feature);
-        }
-      }
-      const dedupedFeatures = Array.from(deduped.values());
-      console.log('[CzMap] After deduplication:', {
-        originalCount: fc.features.length,
-        dedupedCount: dedupedFeatures.length,
-        removed: fc.features.length - dedupedFeatures.length
-      });
+      // The Rust worker returns GeoJSON in EPSG:5514 (S-JTSK/Krovak)
+      // We need to reproject to WGS84 on the client side
+      console.log('[CzMap] Reprojecting from S-JTSK to WGS84...');
+      const reprojStartTime = performance.now();
+      const converted = reprojectFeatureCollection5514ToWgs84(response.geojson);
+      const reprojElapsed = performance.now() - reprojStartTime;
+      console.log('[CzMap] Reprojection completed in', Math.round(reprojElapsed), 'ms');
       
-      const converted = reprojectFeatureCollection5514ToWgs84({
-        type: 'FeatureCollection',
-        features: dedupedFeatures
-      });
       setRegionsData(converted.features);
       setRegionsError(null);
       setRegionsLoading(false);
     } catch (err: any) {
-      setRegionsError(err.message || 'Failed to convert VFR file');
+      console.error('[CzMap] VFR processing error:', err);
+      setRegionsError(err.message || 'Failed to process VFR file via Rust worker');
+    } finally {
+      setUploadProcessing(false);
     }
   };
 
@@ -442,8 +470,14 @@ export function CzMap() {
           <input type="checkbox" checked={overlayVisible} onChange={(e) => setOverlayVisible(e.target.checked)} />
           <span><strong>ZSJ overlay</strong> (deck.gl)</span>
         </label>
-        <button className={styles.playButton} onClick={onUploadClick} style={{ width: 'auto', padding: '0 12px' }}>
-          📂 Upload VFR (XML)
+        <button 
+          className={styles.playButton} 
+          onClick={onUploadClick} 
+          style={{ width: 'auto', padding: '0 12px' }}
+          disabled={uploadProcessing || !natsConnected}
+          title={!natsConnected ? 'Waiting for NATS connection...' : uploadProcessing ? 'Processing...' : 'Upload VFR XML file'}
+        >
+          {uploadProcessing ? '⏳ Processing...' : !natsConnected ? '🔌 Connecting...' : '📂 Upload VFR (XML)'}
         </button>
         <input
           ref={fileInputRef}

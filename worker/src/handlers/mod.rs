@@ -5,10 +5,12 @@
 mod ping;
 mod scenario;
 mod projection_handler;
+mod geo_handler;
 
 pub use ping::{PingHandler, PingRequest, PingResponse, SUBJECT_PING};
 pub use scenario::ScenarioHandler;
 pub use projection_handler::{ProjectionHandler, SUBJECT_PROJECTION_RUN};
+pub use geo_handler::handle_geo_processing;
 
 use async_nats::Client;
 use anyhow::Result;
@@ -42,6 +44,12 @@ pub async fn start_handlers(client: Client, storage: Box<dyn Storage>) -> Result
         if let Err(e) = projection_handler.start().await {
             tracing::error!("Projection handler error: {}", e);
         }
+    });
+    
+    // Start geo processing handler
+    let geo_client = client.clone();
+    tokio::spawn(async move {
+        handle_geo_processing(geo_client).await;
     });
     
     info!("✅ All handlers started");

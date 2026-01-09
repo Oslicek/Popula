@@ -1,6 +1,6 @@
 # Project Context
 
-> **Last Updated:** 2026-01-07 (v0.3.1)
+> **Last Updated:** 2026-01-08 (v0.3.2)
 
 ## Overview
 
@@ -161,7 +161,19 @@ Popula/
 │       │   │   └── scenarioStore.ts
 │       │   └── pages/
 │       │       ├── Home/           # Main page + workspace list ✅
-│       │       └── Workspace/      # Workspace detail page ✅
+│       │       ├── Workspace/      # Workspace detail page ✅
+│       │       ├── Map/            # UK map with population density ✅
+│       │       │   ├── Map.tsx
+│       │       │   ├── populationData.ts
+│       │       │   ├── reprojection.ts
+│       │       │   └── types.ts
+│       │       └── CzMap/          # CZ map with ZSJ microregions ✅
+│       │           ├── CzMap.tsx
+│       │           ├── czPopulationData.ts
+│       │           ├── reprojectionCz.ts
+│       │           ├── vfrToGeojson.ts       # VFR/GML XML parser
+│       │           ├── zoomFiltering.ts      # Zoom-based filtering
+│       │           └── viewportFiltering.ts  # Viewport culling
 │       ├── package.json
 │       └── vite.config.ts
 │
@@ -289,15 +301,25 @@ Popula/
   - "Export All Reports" button (ZIP archive)
   - JSZip library for client-side ZIP generation
   - Floating-point precision handling
-- [x] **Geographic overlay**
+- [x] **Geographic overlay (UK & Czech Republic)**
   - MapLibre OSM basemap with toggle
-  - deck.gl regions overlay (UK local authorities)
-  - On-the-fly reprojection from BNG (EPSG:27700) to WGS84
+  - deck.gl regions overlay (UK local authorities, CZ microregions/ZSJ)
+  - On-the-fly reprojection from BNG (EPSG:27700) and S-JTSK/Krovak (EPSG:5514) to WGS84
+  - Population density choropleth (20-bin quantile scale)
+  - Year slider with animation
+  - Hover tooltips with population/density/area
+  - VFR (GML) XML to GeoJSON converter for Czech data
+  - Automatic deduplication of uploaded features (43,795 → 6,732 unique regions)
+  - **Performance optimizations** for smooth rendering:
+    - Zoom-based filtering: Progressive detail by region area (1% at zoom 6 → 100% at zoom 11+)
+    - Viewport-based filtering: Only process features visible in current view (zoom ≥ 9)
+    - Cached sorting: Sort once, slice on zoom changes (O(1) instead of O(n log n))
+    - Fast bbox calculation: Optimized geometry bounds checking
 
 **Test Coverage:**
-- TypeScript: 96 tests passing (shared-types + web)
+- TypeScript: 125 tests (124 passed, 1 skipped)
 - Rust: 46 tests passing (CCM + handlers + storage)
-- Total: **142 tests**
+- Total: **171 tests**
 
 **In Progress:**
 - [ ] Shock modifier integration with CCM

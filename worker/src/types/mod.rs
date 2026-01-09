@@ -6,9 +6,11 @@ mod demographic;
 mod scenario;
 mod shock;
 mod messages;
+mod geo;
 
 pub use demographic::*;
 pub use scenario::*;
 pub use shock::*;
 pub use messages::*;
+pub use geo::*;
 

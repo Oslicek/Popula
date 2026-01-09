@@ -45,3 +45,8 @@ nats-server.exe
 tmp/
 temp/
 *.tmp
+
+# Large local sample data
+apps/web/public/sample-data/20260107_ST_ZKSG.xml
+apps/web/public/sample-data/20251231_ST_UKSG.xml
+apps/web/public/sample-data/sldb2021_obyv_byt_zsj.csv

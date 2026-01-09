@@ -154,3 +154,14 @@ export {
   getWorkspaceValidationErrors,
   toWorkspaceSummary,
 } from './workspace';
+
+// Geospatial types
+export type {
+  BBox,
+  GeoProcessOptions,
+  GeoProcessRequest,
+  GeoFeature,
+  GeoFeatureCollection,
+  GeoProcessResponse,
+  GeoProcessError,
+} from './geo';
