@@ -1,0 +1,120 @@
+/* ============================================================
+   AppShell - Main Application Layout
+   ============================================================ */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--color-bg-secondary);
+}
+
+/* ============================================================
+   Main Layout Area
+   ============================================================ */
+
+.main {
+  display: flex;
+  flex: 1;
+  margin-top: var(--topbar-height);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ============================================================
+   Content Area
+   ============================================================ */
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  transition: margin var(--transition-base);
+  padding-bottom: var(--bottom-tray-height);
+  min-height: calc(100vh - var(--topbar-height) - var(--bottom-tray-height));
+}
+
+/* ============================================================
+   Chat Panel (Docked)
+   ============================================================ */
+
+.chatPanel {
+  position: fixed;
+  top: var(--topbar-height);
+  right: 0;
+  bottom: var(--bottom-tray-height);
+  width: var(--chat-panel-width);
+  background-color: var(--color-white);
+  border-left: 1px solid var(--color-border-default);
+  z-index: var(--z-fixed);
+  animation: slideInRight var(--transition-base) ease-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.chatPanelMobile {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  border-left: none;
+  z-index: var(--z-modal);
+}
+
+.chatPanelPlaceholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.chatPanelPlaceholder span {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-medium);
+}
+
+.chatPanelPlaceholder small {
+  font-size: var(--text-sm);
+}
+
+/* ============================================================
+   Animations
+   ============================================================ */
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* ============================================================
+   Responsive: Tablet
+   ============================================================ */
+
+@media (max-width: 1024px) {
+  .content {
+    margin-left: var(--rail-width-collapsed) !important;
+  }
+}
+
+/* ============================================================
+   Responsive: Mobile
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .content {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-bottom: var(--mobile-nav-height);
+  }
+
+  .main {
+    margin-top: var(--topbar-height);
+  }
+}

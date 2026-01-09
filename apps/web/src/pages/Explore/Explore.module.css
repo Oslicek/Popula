@@ -1,0 +1,64 @@
+/* ============================================================
+   Explore Page
+   ============================================================ */
+
+.explore {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+}
+
+.placeholder {
+  text-align: center;
+  max-width: 480px;
+}
+
+.icon {
+  font-size: 48px;
+  margin-bottom: var(--space-4);
+}
+
+.placeholder h2 {
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.placeholder p {
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-6);
+}
+
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  text-align: left;
+  padding: var(--space-4);
+  background-color: var(--color-gray-50);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-6);
+}
+
+.feature {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.feature strong {
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+}
+
+.feature span {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.note {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-style: italic;
+}

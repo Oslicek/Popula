@@ -1,6 +1,6 @@
 # Project Context
 
-> **Last Updated:** 2026-01-09 (v0.3.3)
+> **Last Updated:** 2026-01-09 (v0.4.0)
 
 ## Overview
 
@@ -8,7 +8,7 @@
 
 **Repository:** https://github.com/Oslicek/Popula
 
-**Vision:** Professional demographic modeling with game-like accessibility.
+**Vision:** Professional demographic modeling with game-like accessibility, enterprise-level UI for geospatially informed demographic analyses.
 
 ## Technology Stack
 
@@ -133,6 +133,12 @@ Popula/
 │       │       └── humania.json    # Census metadata
 │       ├── src/
 │       │   ├── components/
+│       │   │   ├── shell/               # App shell framework ✅
+│       │   │   │   ├── AppShell.tsx     # Root layout component
+│       │   │   │   ├── TopBar/          # Header with project switcher, search
+│       │   │   │   ├── LeftRail/        # Collapsible navigation rail
+│       │   │   │   ├── BottomTray/      # Run queue status bar
+│       │   │   │   └── MobileNav/       # Mobile bottom navigation
 │       │   │   ├── ConnectionStatus/
 │       │   │   ├── Header/
 │       │   │   ├── Footer/
@@ -158,11 +164,19 @@ Popula/
 │       │   │   └── csvExport.ts    # CSV/ZIP export utilities ✅
 │       │   ├── stores/
 │       │   │   ├── natsStore.ts    # Connection state + projection
-│       │   │   ├── workspaceStore.ts # Workspace management ✅
+│       │   │   ├── uiStore.ts      # UI state (rail, chat, tray) ✅
+│       │   │   ├── projectStore.ts # Project management (renamed from workspace) ✅
+│       │   │   ├── workspaceStore.ts # Legacy workspace store
 │       │   │   └── scenarioStore.ts
 │       │   └── pages/
-│       │       ├── Home/           # Main page + workspace list ✅
-│       │       ├── Workspace/      # Workspace detail page ✅
+│       │       ├── Explore/        # Main workbench (map + inspector) ✅
+│       │       ├── DataWorkspace/  # Data catalog and management ✅
+│       │       ├── Scenarios/      # Scenario library ✅
+│       │       ├── Runs/           # Run history and comparison ✅
+│       │       ├── Reports/        # Export and sharing ✅
+│       │       ├── Admin/          # Admin panel + DevTools ✅
+│       │       ├── Home/           # Legacy home page
+│       │       ├── Workspace/      # Legacy workspace detail page
 │       │       ├── Map/            # UK map with population density ✅
 │       │       │   ├── Map.tsx
 │       │       │   ├── populationData.ts
@@ -237,12 +251,23 @@ Popula/
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
+| **UI Shell** | | |
+| `AppShell` | apps/web/src/components/shell/ | Root layout with TopBar, LeftRail, BottomTray |
+| `TopBar` | apps/web/src/components/shell/ | Header with project switcher, search, user area |
+| `LeftRail` | apps/web/src/components/shell/ | Collapsible icon navigation (desktop) |
+| `BottomTray` | apps/web/src/components/shell/ | Run queue status bar |
+| `MobileNav` | apps/web/src/components/shell/ | Bottom navigation (mobile) |
+| `useUiStore` | apps/web/src/stores/ | UI state: rail, chat, tray, devtools, mobile |
+| `useProjectStore` | apps/web/src/stores/ | Project management (Zustand, persisted) |
+| **Services** | | |
 | `NatsService` | apps/web/src/services/ | NATS WebSocket client (chunked encoding for large payloads) |
 | `GeoService` | apps/web/src/services/ | Rust worker geo processing client |
 | `csvParser` | apps/web/src/services/ | CSV file parsing for imports |
 | `useNatsStore` | apps/web/src/stores/ | Connection state + projection |
-| `useWorkspaceStore` | apps/web/src/stores/ | Workspace management (Zustand) |
-| `Workspace` | apps/web/src/pages/ | Workspace UI with data import |
+| **Legacy** | | |
+| `useWorkspaceStore` | apps/web/src/stores/ | Legacy workspace management |
+| `Workspace` | apps/web/src/pages/ | Legacy workspace UI with data import |
+| **Rust Worker** | | |
 | `PingHandler` | worker/src/handlers/ | Demo request/reply handler |
 | `ProjectionHandler` | worker/src/handlers/ | Run CCM projections via NATS |
 | `GeoHandler` | worker/src/handlers/ | VFR XML processing via NATS |
@@ -259,9 +284,51 @@ Popula/
 | Fertility rates | UN WPP | CC-BY |
 | Migration profiles | Castro-Rogers model curves | Public domain |
 
+## UI Architecture
+
+**Design Principles:**
+- Light theme with fresh, optimistic color scheme (teal primary, coral accent)
+- Simple, clean, airy, organized, consistent design
+- Mobile-first responsive approach
+- "Project" terminology (renamed from "Workspace")
+
+**Layout Structure (Desktop):**
+```
+┌────────────────────────────────────────────────────────────────┐
+│                         TopBar (56px)                          │
+│  [Logo] [Project ▼] [Search / Ctrl+K]    [🔔] [Chat ✨] [Me ▼] │
+├────────┬───────────────────────────────────────────────────────┤
+│        │                                                       │
+│  Left  │                    Main Content                       │
+│  Rail  │                    (Workbench)                        │
+│  (64px │                                                       │
+│   or   │                                                       │
+│  220px)│                                                       │
+│        │                                                       │
+├────────┴───────────────────────────────────────────────────────┤
+│                      BottomTray (48px)                         │
+│  [Queued: 2] [Running: 1] [Done: 5]         [Open queue] [Cmp] │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Pages:**
+| Route | Page | Purpose |
+|-------|------|---------|
+| `/` | → `/explore` | Redirect to main workbench |
+| `/explore` | Explore | Map + charts + inspector (main workbench) |
+| `/data` | DataWorkspace | Data catalog, files, connections |
+| `/scenarios` | Scenarios | Scenario library and editor |
+| `/runs` | Runs | Run history, comparison |
+| `/reports` | Reports | Export and sharing |
+| `/admin` | Admin | Users, billing, DevTools |
+
+**Stores (Zustand):**
+- `uiStore`: Rail collapsed, chat open, tray expanded, devtools modal, mobile state
+- `projectStore`: Projects (CRUD), active project, data imports, projection state
+
 ## Current State
 
-**Phase:** Interactive Visualization
+**Phase:** UI Framework Overhaul
 
 **Completed:**
 - [x] Project architecture design
@@ -333,16 +400,29 @@ Popula/
     - Chunked JSON encoding in frontend to avoid memory spikes
     - NATS max payload increased to 500MB for large file transfers
     - Client-side reprojection (proj4) from S-JTSK to WGS84
+- [x] **UI Framework Overhaul** (v0.4.0)
+  - Light theme with CSS design tokens (teal primary, coral accent)
+  - AppShell component (TopBar, LeftRail, BottomTray, MobileNav)
+  - uiStore (Zustand) with TDD (16 tests)
+  - projectStore (renamed from workspaceStore)
+  - React Router v6 routing structure
+  - Placeholder pages for all routes (Explore, DataWorkspace, Scenarios, Runs, Reports, Admin)
+  - "Project" terminology (renamed from "Workspace")
+  - Mobile-responsive layout foundations
 
 **Test Coverage:**
-- TypeScript: 125 tests (124 passed, 1 skipped)
+- TypeScript: 149 tests (147 passed, 2 skipped)
 - Rust: 46 tests passing (CCM + handlers + storage)
-- Total: **171 tests**
+- Total: **195 tests**
 
 **In Progress:**
-- [ ] Shock modifier integration with CCM
+- [ ] UI Framework completion (shared components, ChatPanel, page content)
 
 **Pending:**
+- [ ] Shared UI components (Button, StatusBadge, Tabs, EntitySelector)
+- [ ] ChatPanel with LLM integration
+- [ ] Data Workspace implementation
+- [ ] Explore page with migrated Map components
 - [ ] Shock modifier integration with CCM
 - [ ] Multi-region support
 
@@ -460,9 +540,12 @@ For each year t → t+1:
 6. ~~Build visualizations (Vega charts)~~ ✅
 7. ~~Add more result views (Sex Ratio, Cohort Tracking, Median Age, Life Table)~~ ✅
 8. ~~Export results to CSV/ZIP~~ ✅
-9. Add shock modifiers (pandemics, wars, crises)
-10. Multi-region support
+9. ~~UI Framework overhaul (AppShell, routing, stores)~~ ✅
+10. Complete UI: shared components, ChatPanel, Data Workspace
+11. Migrate Map components to Explore page
+12. Add shock modifiers (pandemics, wars, crises)
+13. Multi-region support
 
 ---
 
-*This is Chapter Three of the production implementation.*
+*This is Chapter Four: Enterprise UI Framework.*

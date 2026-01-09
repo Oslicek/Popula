@@ -1,0 +1,171 @@
+/* ============================================================
+   BottomTray - Run Queue Status Bar
+   ============================================================ */
+
+.tray {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--color-white);
+  border-top: 1px solid var(--color-border-default);
+  z-index: var(--z-fixed);
+  transition: height var(--transition-base);
+}
+
+.tray.expanded {
+  height: 280px;
+}
+
+/* ============================================================
+   Main Bar (Always Visible)
+   ============================================================ */
+
+.bar {
+  height: var(--bottom-tray-height);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  gap: var(--space-4);
+}
+
+.expandButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  transition: var(--transition-base);
+}
+
+.expandButton:hover {
+  background-color: var(--color-gray-100);
+  color: var(--color-text-secondary);
+}
+
+/* ============================================================
+   Stats
+   ============================================================ */
+
+.stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.statDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+}
+
+.statDot.queued {
+  background-color: var(--color-status-queued);
+}
+
+.statDot.running {
+  background-color: var(--color-status-running);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.statDot.done {
+  background-color: var(--color-status-done);
+}
+
+.statLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.statValue {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  min-width: 20px;
+}
+
+/* ============================================================
+   Actions
+   ============================================================ */
+
+.actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  transition: var(--transition-base);
+}
+
+.actionButton:hover {
+  background-color: var(--color-gray-100);
+  color: var(--color-text-primary);
+}
+
+/* ============================================================
+   Expanded Content
+   ============================================================ */
+
+.expandedContent {
+  height: calc(280px - var(--bottom-tray-height));
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border-light);
+  overflow-y: auto;
+}
+
+.placeholder {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.placeholder span {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-medium);
+}
+
+.placeholder small {
+  font-size: var(--text-sm);
+}
+
+/* ============================================================
+   Animations
+   ============================================================ */
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ============================================================
+   Responsive: Mobile (hidden)
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .tray {
+    display: none;
+  }
+}

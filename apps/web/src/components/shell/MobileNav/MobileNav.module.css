@@ -1,0 +1,76 @@
+/* ============================================================
+   MobileNav - Bottom Navigation for Mobile
+   ============================================================ */
+
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--mobile-nav-height);
+  background-color: var(--color-white);
+  border-top: 1px solid var(--color-border-default);
+  display: flex;
+  align-items: stretch;
+  z-index: var(--z-fixed);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* ============================================================
+   Nav Item
+   ============================================================ */
+
+.navItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: var(--transition-base);
+}
+
+.navItem:active {
+  background-color: var(--color-gray-50);
+}
+
+.navItem.active {
+  color: var(--color-primary-600);
+}
+
+.navItem.active .icon {
+  color: var(--color-primary-600);
+}
+
+/* ============================================================
+   Icon
+   ============================================================ */
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+/* ============================================================
+   Label
+   ============================================================ */
+
+.label {
+  font-size: 10px;
+  font-weight: var(--font-weight-medium);
+}
+
+/* ============================================================
+   Responsive: Hide on larger screens
+   ============================================================ */
+
+@media (min-width: 641px) {
+  .nav {
+    display: none;
+  }
+}

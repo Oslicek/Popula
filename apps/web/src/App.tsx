@@ -1,24 +1,54 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Home } from './pages/Home';
-import { Workspace } from './pages/Workspace';
-import { Map } from './pages/Map';
-import { CzMap } from './pages/CzMap/CzMap';
-import { Layout } from './components/Layout';
-import styles from './App.module.css';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AppShell } from './components/shell';
+
+// Placeholder pages - will be replaced with real implementations
+import { ExplorePlaceholder } from './pages/Explore/Explore';
+import { DataWorkspacePlaceholder } from './pages/DataWorkspace/DataWorkspace';
+import { ScenariosPlaceholder, ScenarioEditorPlaceholder } from './pages/Scenarios/Scenarios';
+import { RunsPlaceholder, RunDetailPlaceholder, CompareViewPlaceholder } from './pages/Runs/Runs';
+import { ReportsPlaceholder } from './pages/Reports/Reports';
+import { AdminPlaceholder, UsersPlaceholder, BillingPlaceholder, DevToolsPlaceholder } from './pages/Admin/Admin';
 
 export function App() {
   return (
     <BrowserRouter>
-      <div className={styles.app}>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/workspace/:id" element={<Workspace />} />
-            <Route path="/map" element={<Map />} />
-            <Route path="/map-cz" element={<CzMap />} />
-          </Route>
-        </Routes>
-      </div>
+      <Routes>
+        <Route element={<AppShell />}>
+          {/* Default redirect to Explore */}
+          <Route path="/" element={<Navigate to="/explore" replace />} />
+          
+          {/* Explore (main workbench) */}
+          <Route path="/explore" element={<ExplorePlaceholder />} />
+          
+          {/* Data Workspace */}
+          <Route path="/data" element={<DataWorkspacePlaceholder />} />
+          <Route path="/data/catalog" element={<DataWorkspacePlaceholder view="catalog" />} />
+          <Route path="/data/files" element={<DataWorkspacePlaceholder view="files" />} />
+          
+          {/* Scenarios */}
+          <Route path="/scenarios" element={<ScenariosPlaceholder />} />
+          <Route path="/scenarios/:id" element={<ScenarioEditorPlaceholder />} />
+          
+          {/* Runs */}
+          <Route path="/runs" element={<RunsPlaceholder />} />
+          <Route path="/runs/compare" element={<CompareViewPlaceholder />} />
+          <Route path="/runs/:id" element={<RunDetailPlaceholder />} />
+          
+          {/* Reports */}
+          <Route path="/reports" element={<ReportsPlaceholder />} />
+          
+          {/* Admin */}
+          <Route path="/admin" element={<AdminPlaceholder />} />
+          <Route path="/admin/users" element={<UsersPlaceholder />} />
+          <Route path="/admin/billing" element={<BillingPlaceholder />} />
+          <Route path="/admin/devtools" element={<DevToolsPlaceholder />} />
+          
+          {/* Legacy redirects */}
+          <Route path="/workspace/:id" element={<Navigate to="/explore" replace />} />
+          <Route path="/map" element={<Navigate to="/explore" replace />} />
+          <Route path="/map-cz" element={<Navigate to="/explore" replace />} />
+        </Route>
+      </Routes>
     </BrowserRouter>
   );
 }

@@ -1,0 +1,85 @@
+/* ============================================================
+   LeftRail - Navigation Sidebar
+   ============================================================ */
+
+.rail {
+  position: fixed;
+  top: var(--topbar-height);
+  left: 0;
+  bottom: 0;
+  width: var(--rail-width-expanded);
+  background-color: var(--color-white);
+  border-right: 1px solid var(--color-border-default);
+  display: flex;
+  flex-direction: column;
+  z-index: var(--z-fixed);
+  transition: width var(--transition-base);
+}
+
+.rail.collapsed {
+  width: var(--rail-width-collapsed);
+}
+
+/* ============================================================
+   Navigation Items Container
+   ============================================================ */
+
+.navItems {
+  flex: 1;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  overflow-y: auto;
+}
+
+/* ============================================================
+   Divider
+   ============================================================ */
+
+.divider {
+  height: 1px;
+  background-color: var(--color-border-default);
+  margin: var(--space-3) 0;
+}
+
+/* ============================================================
+   Collapse Button
+   ============================================================ */
+
+.collapseButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  margin: var(--space-3);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  transition: var(--transition-base);
+}
+
+.collapseButton:hover {
+  background-color: var(--color-gray-100);
+  color: var(--color-text-secondary);
+}
+
+/* ============================================================
+   Responsive: Tablet (force collapsed)
+   ============================================================ */
+
+@media (max-width: 1024px) {
+  .rail {
+    width: var(--rail-width-collapsed);
+  }
+}
+
+/* ============================================================
+   Responsive: Mobile (hidden)
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .rail {
+    display: none;
+  }
+}
