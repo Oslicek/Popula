@@ -172,3 +172,75 @@
   font-size: var(--text-sm);
   margin-bottom: var(--space-4);
 }
+
+/* ============================================================
+   Responsive: Tablet
+   ============================================================ */
+
+@media (max-width: 1024px) {
+  .inspector {
+    width: 320px;
+  }
+}
+
+/* ============================================================
+   Responsive: Mobile
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .inspector {
+    width: 100%;
+    height: auto;
+    max-height: 50vh;
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .header {
+    padding: var(--space-3);
+  }
+
+  .headerTitle {
+    font-size: var(--text-base);
+  }
+
+  .headerIcon {
+    font-size: var(--text-lg);
+  }
+
+  .content {
+    padding: var(--space-3);
+  }
+
+  .section {
+    margin-bottom: var(--space-4);
+  }
+
+  .metaGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
+  }
+
+  .actions {
+    padding: var(--space-3);
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .emptyState {
+    padding: var(--space-4);
+    min-height: 200px;
+  }
+
+  .emptyIcon {
+    font-size: 36px;
+  }
+
+  .emptyTitle {
+    font-size: var(--text-sm);
+  }
+
+  .emptyDescription {
+    font-size: var(--text-xs);
+  }
+}

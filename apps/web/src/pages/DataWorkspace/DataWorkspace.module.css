@@ -158,3 +158,85 @@
   font-size: var(--text-sm);
   font-weight: 500;
 }
+
+/* ============================================================
+   Responsive: Tablet
+   ============================================================ */
+
+@media (max-width: 1024px) {
+  .content {
+    flex-direction: column;
+  }
+}
+
+/* ============================================================
+   Responsive: Mobile
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .header {
+    padding: var(--space-3) var(--space-4);
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .headerLeft,
+  .headerRight {
+    justify-content: space-between;
+  }
+
+  .title {
+    font-size: var(--text-lg);
+  }
+
+  .headerRight {
+    gap: var(--space-2);
+  }
+
+  .nav {
+    padding: 0 var(--space-3);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .navItem {
+    padding: var(--space-3);
+    white-space: nowrap;
+    font-size: var(--text-xs);
+  }
+
+  .content {
+    flex-direction: column;
+  }
+
+  .catalogPlaceholder {
+    padding: var(--space-4);
+    max-width: 100%;
+  }
+
+  .catalogIcon {
+    font-size: 48px;
+  }
+
+  .catalogTitle {
+    font-size: var(--text-lg);
+  }
+
+  .catalogFeatures {
+    padding: var(--space-3);
+  }
+
+  .catalogFeature {
+    gap: var(--space-2);
+  }
+
+  .catalogFeatureIcon {
+    font-size: var(--text-base);
+  }
+
+  .catalogFeatureText strong,
+  .catalogFeatureText span {
+    font-size: var(--text-xs);
+  }
+}

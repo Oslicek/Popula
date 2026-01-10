@@ -144,3 +144,72 @@
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
+
+/* ============================================================
+   Responsive: Mobile
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .header {
+    padding: var(--space-3) var(--space-4);
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .headerLeft {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .title {
+    font-size: var(--text-lg);
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-2);
+    width: 100%;
+  }
+
+  .stat {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-2);
+    background-color: var(--color-gray-50);
+    border-radius: var(--radius-md);
+    font-size: var(--text-xs);
+  }
+
+  .statValue {
+    font-size: var(--text-lg);
+  }
+
+  .comparePlaceholder {
+    padding: var(--space-4);
+  }
+
+  .compareIcon {
+    font-size: 48px;
+  }
+
+  .compareTitle {
+    font-size: var(--text-lg);
+  }
+
+  .compareDescription {
+    font-size: var(--text-sm);
+  }
+
+  .selectedRunsList {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .selectedRunBadge {
+    justify-content: space-between;
+  }
+}

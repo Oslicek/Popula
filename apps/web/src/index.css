@@ -624,3 +624,87 @@ label {
 .animate-fade-in {
   animation: fadeIn var(--transition-base) ease-out;
 }
+
+/* ============================================================
+   RESPONSIVE UTILITIES
+   ============================================================ */
+
+/* Hide on mobile (< 640px) */
+@media (max-width: 640px) {
+  .hide-mobile { display: none !important; }
+}
+
+/* Hide on tablet (641px - 1024px) */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .hide-tablet { display: none !important; }
+}
+
+/* Hide on desktop (> 1024px) */
+@media (min-width: 1025px) {
+  .hide-desktop { display: none !important; }
+}
+
+/* Show only on mobile */
+@media (min-width: 641px) {
+  .show-mobile-only { display: none !important; }
+}
+
+/* Show only on tablet and up */
+@media (max-width: 640px) {
+  .show-tablet-up { display: none !important; }
+}
+
+/* Stack on mobile */
+@media (max-width: 640px) {
+  .stack-mobile {
+    flex-direction: column !important;
+  }
+}
+
+/* Full width on mobile */
+@media (max-width: 640px) {
+  .full-mobile {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Mobile padding adjustments */
+@media (max-width: 640px) {
+  .p-mobile-3 { padding: var(--space-3) !important; }
+  .px-mobile-3 { 
+    padding-left: var(--space-3) !important; 
+    padding-right: var(--space-3) !important; 
+  }
+}
+
+/* Mobile text sizes */
+@media (max-width: 640px) {
+  .text-mobile-sm { font-size: var(--text-sm) !important; }
+  .text-mobile-base { font-size: var(--text-base) !important; }
+}
+
+/* Mobile spacing */
+@media (max-width: 640px) {
+  .gap-mobile-2 { gap: var(--space-2) !important; }
+  .gap-mobile-3 { gap: var(--space-3) !important; }
+}
+
+/* Touch-friendly tap targets */
+@media (max-width: 640px) {
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Safe area insets for notched devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}

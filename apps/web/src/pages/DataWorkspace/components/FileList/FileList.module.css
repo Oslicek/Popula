@@ -207,3 +207,108 @@
   margin-bottom: var(--space-4);
   max-width: 320px;
 }
+
+/* ============================================================
+   Responsive: Mobile
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .toolbar {
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
+
+  .searchInput {
+    max-width: 100%;
+  }
+
+  .filterGroup {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .filterSelect {
+    flex: 1;
+  }
+
+  /* Card-based layout on mobile instead of table */
+  .tableContainer {
+    padding: var(--space-3);
+    background-color: var(--color-gray-50);
+  }
+
+  .table {
+    display: block;
+  }
+
+  .table thead {
+    display: none;
+  }
+
+  .table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .tableRow {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    gap: var(--space-2);
+  }
+
+  .tableRow.selected {
+    border-color: var(--color-primary-500);
+    background-color: var(--color-primary-50);
+  }
+
+  .table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0;
+    border: none;
+  }
+
+  /* Hide checkbox column on mobile */
+  .table td:first-child {
+    display: none;
+  }
+
+  .fileName {
+    font-size: var(--text-sm);
+  }
+
+  .fileIcon {
+    font-size: var(--text-base);
+  }
+
+  .actions {
+    justify-content: flex-end;
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border);
+    margin-top: var(--space-2);
+  }
+
+  .actionButton {
+    width: 36px;
+    height: 36px;
+  }
+
+  .emptyState {
+    padding: var(--space-6);
+  }
+
+  .emptyIcon {
+    font-size: 40px;
+  }
+
+  .emptyTitle {
+    font-size: var(--text-base);
+  }
+}

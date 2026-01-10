@@ -656,3 +656,162 @@
     top: var(--space-2);
   }
 }
+
+/* ============================================================
+   Responsive: Mobile (< 640px)
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .explore {
+    height: calc(100vh - var(--topbar-height) - var(--mobile-nav-height));
+  }
+
+  .overlay {
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  .overlayGroup {
+    flex: 1;
+    min-width: fit-content;
+  }
+
+  .overlayLabel {
+    font-size: var(--text-xs);
+  }
+
+  .overlaySelect {
+    min-width: 80px;
+    font-size: var(--text-xs);
+    padding: var(--space-1);
+  }
+
+  .overlaySeparator {
+    display: none;
+  }
+
+  .runButton {
+    font-size: var(--text-xs);
+    padding: var(--space-1) var(--space-2);
+  }
+
+  .content {
+    flex-direction: column;
+  }
+
+  .mapArea {
+    flex: 1;
+    min-height: 50%;
+  }
+
+  .inspector {
+    width: 100%;
+    height: auto;
+    max-height: 45%;
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .inspectorContent {
+    padding: var(--space-3);
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
+  }
+
+  .statCard {
+    padding: var(--space-2);
+  }
+
+  .statLabel {
+    font-size: 10px;
+  }
+
+  .statValue {
+    font-size: var(--text-base);
+  }
+
+  .timeSliderOverlay {
+    left: var(--space-2);
+    right: var(--space-2);
+    bottom: var(--space-2);
+    padding: var(--space-2);
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  .playButton {
+    width: 32px;
+    height: 32px;
+    font-size: var(--text-sm);
+  }
+
+  .yearLabel {
+    font-size: var(--text-xs);
+  }
+
+  .yearValue {
+    font-size: var(--text-sm);
+  }
+
+  .yearMin,
+  .yearMax {
+    display: none;
+  }
+
+  .mapControls {
+    top: var(--space-2);
+    left: var(--space-2);
+  }
+
+  .layerButton {
+    width: 32px;
+    height: 32px;
+    font-size: var(--text-base);
+  }
+
+  .legendPanel {
+    bottom: 60px;
+    left: var(--space-2);
+    padding: var(--space-2);
+    min-width: 140px;
+  }
+
+  .legendTitle {
+    font-size: 10px;
+  }
+
+  .legendSwatch {
+    height: 8px;
+  }
+
+  .legendLabels {
+    font-size: 10px;
+  }
+
+  .hoverTooltip {
+    display: none;
+  }
+
+  .regionToggle {
+    flex-wrap: nowrap;
+  }
+
+  .regionOption {
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--text-xs);
+  }
+
+  /* Section styles for mobile */
+  .section {
+    margin-bottom: var(--space-4);
+  }
+
+  .sectionTitle {
+    font-size: var(--text-xs);
+    margin-bottom: var(--space-2);
+  }
+}

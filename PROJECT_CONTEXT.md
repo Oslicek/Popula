@@ -1,6 +1,6 @@
 # Project Context
 
-> **Last Updated:** 2026-01-10 (v0.4.3)
+> **Last Updated:** 2026-01-10 (v0.4.4)
 
 ## Overview
 
@@ -437,6 +437,15 @@ Popula/
   - Compare view placeholder
   - Status badges (queued, running, done, failed)
   - Clear completed runs action
+- [x] **Mobile Responsive Styles** (v0.4.4)
+  - Global responsive utility classes (hide-mobile, show-mobile-only, stack-mobile, etc.)
+  - Mobile-optimized AppShell (TopBar, LeftRail hidden, MobileNav visible)
+  - Card-based layouts for tables on mobile (FileList, RunsList)
+  - Touch-friendly tap targets (min 44px)
+  - Safe area insets for notched devices
+  - Responsive Data Workspace (header, navigation, inspector)
+  - Responsive Runs page (header, stats grid, detail view)
+  - Responsive Explore page (overlay controls, inspector panel, time slider)
 
 **Test Coverage:**
 - TypeScript: 288 tests (266 passed, 5 skipped)
@@ -444,10 +453,12 @@ Popula/
 - Total: **334 tests**
 
 **In Progress:**
-- [ ] UI Framework completion (ChatPanel, page content)
+- [ ] UI Framework completion (ChatPanel, Scenarios, Reports pages)
 
 **Pending:**
 - [ ] ChatPanel with LLM integration
+- [ ] Scenarios page implementation
+- [ ] Reports page implementation
 - [ ] Integrate projection charts into Explore Inspector
 - [ ] Shock modifier integration with CCM
 - [ ] Multi-region support
@@ -570,7 +581,8 @@ For each year t → t+1:
 10. ~~Migrate Map components to Explore page~~ ✅
 11. ~~Data Workspace implementation~~ ✅
 12. ~~Runs page implementation~~ ✅
-13. Complete UI: ChatPanel, Scenarios, Reports pages
+13. ~~Mobile responsive styles~~ ✅
+14. Complete UI: ChatPanel, Scenarios, Reports pages
 13. Integrate projection charts into Explore Inspector
 13. Add shock modifiers (pandemics, wars, crises)
 14. Multi-region support
