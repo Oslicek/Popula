@@ -1,64 +1,658 @@
 /* ============================================================
-   Explore Page
+   Explore Page - Main Workbench Layout
    ============================================================ */
 
 .explore {
   height: 100%;
   display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ============================================================
+   Overlay Controls (top of map)
+   ============================================================ */
+
+.overlay {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-white);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.overlayGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.overlayLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.overlaySelect {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-white);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.overlaySelect:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 2px var(--color-primary-50);
+}
+
+.overlaySeparator {
+  width: 1px;
+  height: 24px;
+  background-color: var(--color-border);
+  margin: 0 var(--space-2);
+}
+
+.runButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--color-primary-500);
+  color: var(--color-white);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+.runButton:hover {
+  background-color: var(--color-primary-600);
+}
+
+.runButton:disabled {
+  background-color: var(--color-gray-300);
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   Main Content Area
+   ============================================================ */
+
+.content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ============================================================
+   Map Canvas
+   ============================================================ */
+
+.mapArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.mapContainer {
+  flex: 1;
+  position: relative;
+}
+
+.mapCanvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* ============================================================
+   Time Slider Overlay
+   ============================================================ */
+
+.timeSliderOverlay {
+  position: absolute;
+  bottom: var(--space-4);
+  left: var(--space-4);
+  right: var(--inspector-width);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+}
+
+.timeSliderOverlay.noInspector {
+  right: var(--space-4);
+}
+
+.playButton {
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-8);
+  width: 36px;
+  height: 36px;
+  background-color: var(--color-primary-500);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: var(--text-base);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
-.placeholder {
-  text-align: center;
-  max-width: 480px;
+.playButton:hover {
+  background-color: var(--color-primary-600);
+  transform: scale(1.05);
 }
 
-.icon {
-  font-size: 48px;
-  margin-bottom: var(--space-4);
+.yearLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 
-.placeholder h2 {
+.yearValue {
+  font-weight: 600;
   color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+}
+
+.yearSlider {
+  flex: 1;
+  height: 6px;
+  background: var(--color-gray-200);
+  border-radius: 3px;
+  appearance: none;
+  cursor: pointer;
+}
+
+.yearSlider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--color-primary-500);
+  border-radius: 50%;
+  cursor: grab;
+  transition: transform 0.1s ease;
+}
+
+.yearSlider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.yearMin,
+.yearMax {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  min-width: 40px;
+}
+
+.yearMin {
+  text-align: right;
+}
+
+/* ============================================================
+   Map Controls
+   ============================================================ */
+
+.mapControls {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  z-index: 10;
+}
+
+.layerButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background-color: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: var(--text-lg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.layerButton:hover {
+  background-color: var(--color-gray-50);
+  border-color: var(--color-gray-300);
+}
+
+.layerButton.active {
+  background-color: var(--color-primary-50);
+  border-color: var(--color-primary-500);
+  color: var(--color-primary-600);
+}
+
+/* ============================================================
+   Legend Panel
+   ============================================================ */
+
+.legendPanel {
+  position: absolute;
+  bottom: 80px;
+  left: var(--space-4);
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+  min-width: 180px;
+}
+
+.legendTitle {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   margin-bottom: var(--space-2);
 }
 
-.placeholder p {
+.legendScale {
+  display: flex;
+  gap: 1px;
+  margin-bottom: var(--space-2);
+}
+
+.legendSwatch {
+  flex: 1;
+  height: 12px;
+}
+
+.legendLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
+  margin-top: var(--space-2);
+}
+
+.legendDot {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-sm);
+}
+
+/* ============================================================
+   Hover Tooltip
+   ============================================================ */
+
+.hoverTooltip {
+  position: absolute;
+  top: var(--space-4);
+  right: calc(var(--inspector-width) + var(--space-4));
+  background-color: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+  pointer-events: none;
+  min-width: 200px;
+}
+
+.hoverTooltip.noInspector {
+  right: var(--space-4);
+}
+
+.tooltipTitle {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.tooltipRow {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.tooltipValue {
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+/* ============================================================
+   Inspector Panel
+   ============================================================ */
+
+.inspector {
+  width: var(--inspector-width);
+  background-color: var(--color-white);
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.inspectorTabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-gray-50);
+}
+
+.inspectorTab {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.inspectorTab:hover {
+  background-color: var(--color-white);
+  color: var(--color-text-primary);
+}
+
+.inspectorTab.active {
+  background-color: var(--color-white);
+  color: var(--color-primary-600);
+  border-bottom-color: var(--color-primary-500);
+}
+
+.inspectorContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+/* Inspector Sections */
+.section {
   margin-bottom: var(--space-6);
 }
 
-.features {
+.sectionTitle {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--space-3);
+}
+
+.sectionContent {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  text-align: left;
-  padding: var(--space-4);
-  background-color: var(--color-gray-50);
-  border-radius: var(--radius-lg);
-  margin-bottom: var(--space-6);
 }
 
-.feature {
+.field {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
 
-.feature strong {
+.fieldLabel {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.fieldValue {
+  font-size: var(--text-sm);
   color: var(--color-text-primary);
+}
+
+/* Summary Stats */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.statCard {
+  background-color: var(--color-gray-50);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+
+.statLabel {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.statValue {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* ============================================================
+   Loading & Error States
+   ============================================================ */
+
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.9);
+  z-index: 100;
+}
+
+.loadingSpinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-gray-200);
+  border-top-color: var(--color-primary-500);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingText {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.errorBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background-color: #FEF2F2;
+  border-bottom: 1px solid #FECACA;
+  color: #991B1B;
   font-size: var(--text-sm);
 }
 
-.feature span {
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
+.errorIcon {
+  flex-shrink: 0;
 }
 
-.note {
-  color: var(--color-text-muted);
+/* ============================================================
+   Region Toggle (UK/CZ)
+   ============================================================ */
+
+.regionToggle {
+  display: flex;
+  background-color: var(--color-gray-100);
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+
+.regionOption {
+  padding: var(--space-1) var(--space-3);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
   font-size: var(--text-sm);
-  font-style: italic;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.regionOption:hover {
+  color: var(--color-text-primary);
+}
+
+.regionOption.active {
+  background-color: var(--color-white);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ============================================================
+   Map Control Overrides for Light Theme
+   ============================================================ */
+
+:global(.maplibregl-ctrl-group) {
+  background: var(--color-white) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+:global(.maplibregl-ctrl-group button) {
+  background-color: transparent !important;
+  border-color: var(--color-border) !important;
+}
+
+:global(.maplibregl-ctrl-group button:hover) {
+  background-color: var(--color-gray-50) !important;
+}
+
+:global(.maplibregl-ctrl-group button + button) {
+  border-top-color: var(--color-border) !important;
+}
+
+:global(.maplibregl-ctrl-icon) {
+  filter: none;
+}
+
+:global(.maplibregl-ctrl-scale) {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--color-text-secondary) !important;
+  font-family: var(--font-mono) !important;
+  font-size: var(--text-xs) !important;
+  padding: 2px 6px !important;
+}
+
+:global(.maplibregl-ctrl-attrib) {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: var(--color-text-muted) !important;
+  font-size: var(--text-xs) !important;
+}
+
+:global(.maplibregl-ctrl-attrib a) {
+  color: var(--color-primary-600) !important;
+}
+
+/* ============================================================
+   Responsive Adjustments
+   ============================================================ */
+
+@media (max-width: 1024px) {
+  .inspector {
+    width: 320px;
+  }
+  
+  .timeSliderOverlay {
+    right: 340px;
+  }
+  
+  .hoverTooltip {
+    right: 340px;
+  }
+}
+
+@media (max-width: 768px) {
+  .overlay {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  
+  .content {
+    flex-direction: column;
+  }
+  
+  .inspector {
+    width: 100%;
+    height: 50%;
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+  }
+  
+  .timeSliderOverlay {
+    left: var(--space-2);
+    right: var(--space-2);
+    bottom: var(--space-2);
+  }
+  
+  .legendPanel {
+    bottom: 70px;
+    left: var(--space-2);
+  }
+  
+  .hoverTooltip {
+    right: var(--space-2);
+    top: var(--space-2);
+  }
 }

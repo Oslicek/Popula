@@ -261,3 +261,34 @@ export function toWorkspaceSummary(workspace: Workspace): WorkspaceSummary {
   };
 }
 
+// ============================================================
+// Type Aliases: Workspace -> Project
+// For the new UI, we use "Project" terminology
+// ============================================================
+
+/** @alias Workspace - Project is the new name for Workspace */
+export type Project = Workspace;
+
+/** @alias WorkspaceSummary */
+export type ProjectSummary = WorkspaceSummary;
+
+/** Alias for createWorkspace */
+export const createProject = createWorkspace;
+
+/** Alias for isReadyForProjection */
+export const isProjectReady = isReadyForProjection;
+
+/** Alias for getWorkspaceValidationErrors */
+export const getProjectValidationErrors = getWorkspaceValidationErrors;
+
+/** Alias for toWorkspaceSummary */
+export const toProjectSummary = toWorkspaceSummary;
+
+/**
+ * Generate a unique project ID
+ */
+export function generateProjectId(): string {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 8);
+  return `proj_${timestamp}_${random}`;
+}
