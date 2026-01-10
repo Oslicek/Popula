@@ -1,6 +1,6 @@
 # Project Context
 
-> **Last Updated:** 2026-01-09 (v0.4.0)
+> **Last Updated:** 2026-01-10 (v0.4.1)
 
 ## Overview
 
@@ -409,11 +409,20 @@ Popula/
   - Placeholder pages for all routes (Explore, DataWorkspace, Scenarios, Runs, Reports, Admin)
   - "Project" terminology (renamed from "Workspace")
   - Mobile-responsive layout foundations
+- [x] **Map Integration into Explore Page** (v0.4.1)
+  - Unified Explore page with UK/CZ region toggle
+  - Inspector panel with Setup/Results/Notes tabs
+  - Time slider overlay for year animation
+  - Population density choropleth with legend
+  - Hover tooltip with region statistics
+  - Light theme MapLibre control styling
+  - VFR XML upload for CZ regions
+  - Animated map transitions between regions
 
 **Test Coverage:**
-- TypeScript: 149 tests (147 passed, 2 skipped)
+- TypeScript: 150 tests (149 passed, 1 skipped)
 - Rust: 46 tests passing (CCM + handlers + storage)
-- Total: **195 tests**
+- Total: **196 tests**
 
 **In Progress:**
 - [ ] UI Framework completion (shared components, ChatPanel, page content)
@@ -422,7 +431,7 @@ Popula/
 - [ ] Shared UI components (Button, StatusBadge, Tabs, EntitySelector)
 - [ ] ChatPanel with LLM integration
 - [ ] Data Workspace implementation
-- [ ] Explore page with migrated Map components
+- [ ] Integrate projection charts into Explore Inspector
 - [ ] Shock modifier integration with CCM
 - [ ] Multi-region support
 
@@ -541,10 +550,11 @@ For each year t → t+1:
 7. ~~Add more result views (Sex Ratio, Cohort Tracking, Median Age, Life Table)~~ ✅
 8. ~~Export results to CSV/ZIP~~ ✅
 9. ~~UI Framework overhaul (AppShell, routing, stores)~~ ✅
-10. Complete UI: shared components, ChatPanel, Data Workspace
-11. Migrate Map components to Explore page
-12. Add shock modifiers (pandemics, wars, crises)
-13. Multi-region support
+10. ~~Migrate Map components to Explore page~~ ✅
+11. Complete UI: shared components, ChatPanel, Data Workspace
+12. Integrate projection charts into Explore Inspector
+13. Add shock modifiers (pandemics, wars, crises)
+14. Multi-region support
 
 ---
 
