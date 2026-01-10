@@ -6,9 +6,11 @@ describe('uiStore', () => {
     // Reset store state before each test
     useUIStore.setState({
       railCollapsed: false,
+      mobileMenuOpen: false,
       chatPanelOpen: false,
       bottomTrayExpanded: false,
       devToolsModalOpen: false,
+      isMobile: false,
     });
   });
 
@@ -36,6 +38,38 @@ describe('uiStore', () => {
       
       setRailCollapsed(false);
       expect(useUIStore.getState().railCollapsed).toBe(false);
+    });
+  });
+
+  describe('mobile menu', () => {
+    it('starts closed', () => {
+      const state = useUIStore.getState();
+      expect(state.mobileMenuOpen).toBe(false);
+    });
+
+    it('opens mobile menu', () => {
+      const { openMobileMenu } = useUIStore.getState();
+      
+      openMobileMenu();
+      expect(useUIStore.getState().mobileMenuOpen).toBe(true);
+    });
+
+    it('closes mobile menu', () => {
+      useUIStore.setState({ mobileMenuOpen: true });
+      const { closeMobileMenu } = useUIStore.getState();
+      
+      closeMobileMenu();
+      expect(useUIStore.getState().mobileMenuOpen).toBe(false);
+    });
+
+    it('toggles mobile menu', () => {
+      const { toggleMobileMenu } = useUIStore.getState();
+      
+      toggleMobileMenu();
+      expect(useUIStore.getState().mobileMenuOpen).toBe(true);
+      
+      toggleMobileMenu();
+      expect(useUIStore.getState().mobileMenuOpen).toBe(false);
     });
   });
 

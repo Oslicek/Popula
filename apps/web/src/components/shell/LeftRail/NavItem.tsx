@@ -4,6 +4,7 @@
 
 import { NavLink, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { useUIStore } from '../../../stores/uiStore';
 import styles from './NavItem.module.css';
 
 interface NavItemProps {
@@ -40,13 +41,22 @@ export function isNavItemActive(navPath: string, currentPath: string): boolean {
 
 export function NavItem({ to, icon, label, collapsed, badge }: NavItemProps) {
   const location = useLocation();
+  const { closeMobileMenu, isMobile } = useUIStore();
   const isActive = isNavItemActive(to, location.pathname);
+
+  const handleClick = () => {
+    // Close mobile menu when navigating
+    if (isMobile) {
+      closeMobileMenu();
+    }
+  };
 
   return (
     <NavLink
       to={to}
       className={`${styles.navItem} ${isActive ? styles.active : ''} ${collapsed ? styles.collapsed : ''}`}
       title={collapsed ? label : undefined}
+      onClick={handleClick}
     >
       <span className={styles.icon}>{icon}</span>
       {!collapsed && (

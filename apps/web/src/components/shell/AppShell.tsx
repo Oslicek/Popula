@@ -68,10 +68,8 @@ export function AppShell() {
 
       {/* Main Layout */}
       <div className={styles.main}>
-        {/* Left Rail - Hidden on mobile */}
-        {!isMobile && (
-          <LeftRail collapsed={railCollapsed} />
-        )}
+        {/* Left Rail - Drawer on mobile, sidebar on desktop */}
+        <LeftRail collapsed={railCollapsed} />
 
         {/* Content Area */}
         <main 

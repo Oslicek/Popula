@@ -75,11 +75,57 @@
 }
 
 /* ============================================================
-   Responsive: Mobile (hidden)
+   Backdrop (for mobile drawer)
+   ============================================================ */
+
+.backdrop {
+  display: none;
+}
+
+/* ============================================================
+   Responsive: Mobile (drawer mode)
    ============================================================ */
 
 @media (max-width: 640px) {
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  .backdrop.visible {
+    opacity: 1;
+    visibility: visible;
+  }
+
   .rail {
-    display: none;
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+    box-shadow: var(--shadow-xl);
+    padding-top: var(--space-4);
+  }
+
+  .rail.mobileOpen {
+    transform: translateX(0);
+  }
+
+  .rail.collapsed {
+    width: 280px; /* Don't collapse on mobile */
+  }
+
+  .collapseButton {
+    display: none; /* Hide collapse button on mobile */
   }
 }

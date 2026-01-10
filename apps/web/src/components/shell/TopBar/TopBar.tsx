@@ -13,8 +13,16 @@ import { useNatsStore } from '../../../stores/natsStore';
 import styles from './TopBar.module.css';
 
 export function TopBar() {
-  const { toggleChatPanel, chatPanelOpen, toggleRail, railCollapsed } = useUIStore();
+  const { toggleChatPanel, chatPanelOpen, toggleRail, railCollapsed, toggleMobileMenu, isMobile } = useUIStore();
   const { status } = useNatsStore();
+
+  const handleMenuClick = () => {
+    if (isMobile) {
+      toggleMobileMenu();
+    } else {
+      toggleRail();
+    }
+  };
 
   return (
     <header className={styles.topBar}>
@@ -22,8 +30,8 @@ export function TopBar() {
       <div className={styles.left}>
         <button 
           className={styles.menuButton}
-          onClick={toggleRail}
-          aria-label={railCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          onClick={handleMenuClick}
+          aria-label={isMobile ? 'Toggle menu' : (railCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
         >
           <MenuIcon />
         </button>

@@ -7,6 +7,12 @@ export interface UIState {
   toggleRail: () => void;
   setRailCollapsed: (collapsed: boolean) => void;
 
+  // Mobile menu (drawer)
+  mobileMenuOpen: boolean;
+  openMobileMenu: () => void;
+  closeMobileMenu: () => void;
+  toggleMobileMenu: () => void;
+
   // Chat panel
   chatPanelOpen: boolean;
   openChatPanel: () => void;
@@ -37,6 +43,12 @@ export const useUIStore = create<UIState>()(
       railCollapsed: false,
       toggleRail: () => set((state) => ({ railCollapsed: !state.railCollapsed })),
       setRailCollapsed: (collapsed) => set({ railCollapsed: collapsed }),
+
+      // Mobile menu state
+      mobileMenuOpen: false,
+      openMobileMenu: () => set({ mobileMenuOpen: true }),
+      closeMobileMenu: () => set({ mobileMenuOpen: false }),
+      toggleMobileMenu: () => set((state) => ({ mobileMenuOpen: !state.mobileMenuOpen })),
 
       // Chat panel state
       chatPanelOpen: false,

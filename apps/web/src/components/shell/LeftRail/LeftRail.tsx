@@ -19,11 +19,19 @@ interface LeftRailProps {
 }
 
 export function LeftRail({ collapsed }: LeftRailProps) {
-  const { toggleRail } = useUIStore();
+  const { toggleRail, mobileMenuOpen, closeMobileMenu } = useUIStore();
 
   return (
-    <nav className={`${styles.rail} ${collapsed ? styles.collapsed : ''}`}>
-      <div className={styles.navItems}>
+    <>
+      {/* Backdrop for mobile drawer */}
+      <div 
+        className={`${styles.backdrop} ${mobileMenuOpen ? styles.visible : ''}`}
+        onClick={closeMobileMenu}
+        aria-hidden="true"
+      />
+      
+      <nav className={`${styles.rail} ${collapsed ? styles.collapsed : ''} ${mobileMenuOpen ? styles.mobileOpen : ''}`}>
+        <div className={styles.navItems}>
         {/* Main Navigation */}
         <NavItem
           to="/explore"
@@ -77,6 +85,7 @@ export function LeftRail({ collapsed }: LeftRailProps) {
         <CollapseIcon collapsed={collapsed} />
       </button>
     </nav>
+    </>
   );
 }
 
