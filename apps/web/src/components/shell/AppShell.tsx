@@ -20,7 +20,6 @@ import { useUIStore } from '../../stores/uiStore';
 import styles from './AppShell.module.css';
 
 const MOBILE_BREAKPOINT = 640;
-const TABLET_BREAKPOINT = 1024;
 
 export function AppShell() {
   const { 
@@ -28,29 +27,18 @@ export function AppShell() {
     chatPanelOpen,
     isMobile,
     setIsMobile,
-    setRailCollapsed,
   } = useUIStore();
 
   // Handle responsive breakpoints
   useEffect(() => {
     const handleResize = () => {
-      const width = window.innerWidth;
-      const wasMobile = isMobile;
-      const newIsMobile = width < MOBILE_BREAKPOINT;
-      const isTablet = width >= MOBILE_BREAKPOINT && width < TABLET_BREAKPOINT;
-      
-      setIsMobile(newIsMobile);
-      
-      // Auto-collapse rail when entering tablet range
-      if (isTablet && !wasMobile && !railCollapsed) {
-        setRailCollapsed(true);
-      }
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
     };
 
     handleResize(); // Check on mount
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [setIsMobile, isMobile, railCollapsed, setRailCollapsed]);
+  }, [setIsMobile]);
 
   // Handle keyboard shortcuts
   useEffect(() => {
