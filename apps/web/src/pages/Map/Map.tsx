@@ -115,49 +115,7 @@ export function Map() {
   const densityColorScale = useMemo(() => {
     if (!layerFeatures) return null;
     const densities = layerFeatures.map((f) => f.properties?.density ?? null);
-    const scale = createPopulationColorScale(densities, DENSITY_COLORS);
-    // #region agent log
-    const numericDensities = densities.filter((v): v is number => Number.isFinite(v as number)).sort((a, b) => a - b);
-    const bucketCount = DENSITY_COLORS.length;
-    const thresholds: number[] = [];
-    if (numericDensities.length > 0) {
-      for (let i = 1; i < bucketCount; i++) {
-        const idx = Math.min(numericDensities.length - 1, Math.floor((i * numericDensities.length) / bucketCount));
-        thresholds.push(numericDensities[idx]);
-      }
-    }
-    const sampleValues = numericDensities.length
-      ? [
-          numericDensities[0],
-          numericDensities[Math.floor(numericDensities.length / 4)] ?? null,
-          numericDensities[Math.floor(numericDensities.length / 2)] ?? null,
-          numericDensities[Math.floor((3 * numericDensities.length) / 4)] ?? null,
-          numericDensities[numericDensities.length - 1]
-        ]
-      : [];
-    fetch('http://127.0.0.1:7244/ingest/077d060f-f64b-4665-8ffb-d4911617c6a2', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: 'debug-session',
-        runId: 'pre-fix2',
-        hypothesisId: 'H_scale2',
-        location: 'Map.tsx:densityColorScale',
-        message: 'Scale thresholds and samples',
-        data: {
-          densitiesCount: densities.length,
-          numericCount: numericDensities.length,
-          min: numericDensities[0] ?? null,
-          max: numericDensities[numericDensities.length - 1] ?? null,
-          thresholds,
-          bucketCount,
-          sampleValues
-        },
-        timestamp: Date.now()
-      })
-    }).catch(() => {});
-    // #endregion
-    return scale;
+    return createPopulationColorScale(densities, DENSITY_COLORS);
   }, [layerFeatures]);
 
   // Animation effect for year slider
@@ -231,29 +189,7 @@ export function Map() {
               : hasData
               ? REGION_FILL_COLOR
               : [180, 180, 180, 120];
-          // #region agent log
-          if ((d.properties as any)?.LAD23CD && Math.random() < 0.02) {
-            fetch('http://127.0.0.1:7244/ingest/077d060f-f64b-4665-8ffb-d4911617c6a2', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                sessionId: 'debug-session',
-                runId: 'pre-fix1',
-                hypothesisId: 'H_fill',
-                location: 'Map.tsx:getFillColor',
-                message: 'Fill color assignment sample',
-                data: {
-                  code: (d.properties as any)?.LAD23CD,
-                  density,
-                  hasData,
-                  color: baseColor
-                },
-                timestamp: Date.now()
-              })
-            }).catch(() => {});
-          }
-          // #endregion
-            return name === hoveredRegion ? REGION_HOVER_COLOR : (baseColor as [number, number, number, number]);
+          return name === hoveredRegion ? REGION_HOVER_COLOR : (baseColor as [number, number, number, number]);
         },
         getLineColor: REGION_LINE_COLOR,
         getLineWidth: 1.2,

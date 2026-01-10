@@ -4,6 +4,7 @@
  * Displays a list of runs with filtering and selection
  */
 
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRunsStore, type RunStatus, type RunType } from '../../../../stores/runsStore';
 import { StatusBadge, Button } from '../../../../components/ui';
@@ -39,19 +40,23 @@ const getStatusBadgeStatus = (status: RunStatus): 'queued' | 'running' | 'done' 
 
 export function RunsList() {
   const navigate = useNavigate();
-  const {
-    runs,
-    selectedRunIds,
-    filter,
-    setFilter,
-    toggleRunSelection,
-    clearSelection,
-    removeRun,
-    getFilteredRuns,
-    clearCompletedRuns,
-  } = useRunsStore();
+  const runs = useRunsStore((state) => state.runs ?? []);
+  const selectedRunIds = useRunsStore((state) => state.selectedRunIds ?? []);
+  const filter = useRunsStore((state) => state.filter);
+  const setFilter = useRunsStore((state) => state.setFilter);
+  const toggleRunSelection = useRunsStore((state) => state.toggleRunSelection);
+  const clearSelection = useRunsStore((state) => state.clearSelection);
+  const removeRun = useRunsStore((state) => state.removeRun);
+  const clearCompletedRuns = useRunsStore((state) => state.clearCompletedRuns);
 
-  const filteredRuns = getFilteredRuns();
+  // Compute filtered runs with useMemo to avoid creating new arrays on every render
+  const filteredRuns = useMemo(() => {
+    return runs.filter((run) => {
+      if (filter?.type !== 'all' && run.type !== filter?.type) return false;
+      if (filter?.status !== 'all' && run.status !== filter?.status) return false;
+      return true;
+    });
+  }, [runs, filter?.type, filter?.status]);
 
   const handleRowClick = (runId: string) => {
     navigate(`/runs/${runId}`);

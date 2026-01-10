@@ -276,9 +276,7 @@ export type ProjectSummary = WorkspaceSummary;
 export const createProject = createWorkspace;
 
 /** Alias for isReadyForProjection */
-export const isProjectReady = isReadyForProjection;
-
-/** Alias for getWorkspaceValidationErrors */
+export const isProjectReady = isReadyForProjection;/** Alias for getWorkspaceValidationErrors */
 export const getProjectValidationErrors = getWorkspaceValidationErrors;
 
 /** Alias for toWorkspaceSummary */

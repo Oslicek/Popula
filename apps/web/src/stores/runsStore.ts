@@ -145,9 +145,9 @@ export const useRunsStore = create<RunsState & RunsActions>()(
 
       getFilteredRuns: () => {
         const { runs, filter } = get();
-        return runs.filter((run) => {
-          if (filter.type !== 'all' && run.type !== filter.type) return false;
-          if (filter.status !== 'all' && run.status !== filter.status) return false;
+        return (runs ?? []).filter((run) => {
+          if (filter?.type !== 'all' && run.type !== filter?.type) return false;
+          if (filter?.status !== 'all' && run.status !== filter?.status) return false;
           return true;
         });
       },
@@ -171,10 +171,9 @@ export const useRunsStore = create<RunsState & RunsActions>()(
   )
 );
 
-// Selectors
-export const selectQueuedRuns = (state: RunsState) => state.runs.filter((r) => r.status === 'queued');
-export const selectRunningRuns = (state: RunsState) => state.runs.filter((r) => r.status === 'running');
-export const selectCompletedRuns = (state: RunsState) => state.runs.filter((r) => r.status === 'done');
-export const selectFailedRuns = (state: RunsState) => state.runs.filter((r) => r.status === 'failed');
-export const selectSelectedRuns = (state: RunsState & RunsActions) => 
-  state.selectedRunIds.map((id) => state.runs.find((r) => r.id === id)).filter(Boolean) as Run[];
+// Count selectors (return primitives to avoid infinite loops)
+export const selectQueuedCount = (state: RunsState) => (state.runs ?? []).filter((r) => r.status === 'queued').length;
+export const selectRunningCount = (state: RunsState) => (state.runs ?? []).filter((r) => r.status === 'running').length;
+export const selectCompletedCount = (state: RunsState) => (state.runs ?? []).filter((r) => r.status === 'done').length;
+export const selectFailedCount = (state: RunsState) => (state.runs ?? []).filter((r) => r.status === 'failed').length;
+export const selectSelectedCount = (state: RunsState) => (state.selectedRunIds ?? []).length;

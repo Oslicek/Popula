@@ -32,9 +32,11 @@ const formatDate = (isoString: string | undefined): string => {
 export function RunDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getRunById, removeRun, selectRun } = useRunsStore();
+  const runs = useRunsStore((state) => state.runs ?? []);
+  const removeRun = useRunsStore((state) => state.removeRun);
+  const selectRun = useRunsStore((state) => state.selectRun);
 
-  const run = id ? getRunById(id) : undefined;
+  const run = id ? runs.find((r) => r.id === id) : undefined;
 
   if (!run) {
     return (

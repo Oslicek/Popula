@@ -3,16 +3,16 @@
  */
 
 import { useNavigate } from 'react-router-dom';
-import { useRunsStore, selectQueuedRuns, selectRunningRuns, selectCompletedRuns, selectFailedRuns, selectSelectedRuns } from '../../stores/runsStore';
+import { useRunsStore, selectQueuedCount, selectRunningCount, selectCompletedCount, selectFailedCount } from '../../stores/runsStore';
 import { RunsList, RunDetail } from './components';
 import { Button } from '../../components/ui';
 import styles from './Runs.module.css';
 
 export function Runs() {
-  const queuedCount = useRunsStore(selectQueuedRuns).length;
-  const runningCount = useRunsStore(selectRunningRuns).length;
-  const doneCount = useRunsStore(selectCompletedRuns).length;
-  const failedCount = useRunsStore(selectFailedRuns).length;
+  const queuedCount = useRunsStore(selectQueuedCount);
+  const runningCount = useRunsStore(selectRunningCount);
+  const doneCount = useRunsStore(selectCompletedCount);
+  const failedCount = useRunsStore(selectFailedCount);
 
   return (
     <div className={styles.page}>
@@ -52,8 +52,14 @@ export function RunDetailPage() {
 
 export function CompareView() {
   const navigate = useNavigate();
-  const selectedRuns = useRunsStore(selectSelectedRuns);
+  const runs = useRunsStore((state) => state.runs ?? []);
+  const selectedRunIds = useRunsStore((state) => state.selectedRunIds ?? []);
   const { deselectRun, clearSelection } = useRunsStore();
+  
+  // Compute selected runs from IDs (avoids selector returning new array reference)
+  const selectedRuns = selectedRunIds
+    .map((id) => runs.find((r) => r.id === id))
+    .filter(Boolean);
 
   return (
     <div className={styles.page}>

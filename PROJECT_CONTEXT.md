@@ -1,6 +1,6 @@
 # Project Context
 
-> **Last Updated:** 2026-01-10 (v0.4.4)
+> **Last Updated:** 2026-01-10 (v0.4.5)
 
 ## Overview
 
@@ -451,6 +451,12 @@ Popula/
 - TypeScript: 288 tests (266 passed, 5 skipped)
 - Rust: 46 tests passing (CCM + handlers + storage)
 - Total: **334 tests**
+
+**Bug Fixes (v0.4.5):**
+- Fixed missing `ScenarioEditorPlaceholder` export causing app crash
+- Fixed Zustand selector infinite loop in Runs page (selectors now return primitives)
+- Removed debug fetch calls to port 7244 causing connection errors
+- Made runsStore selectors defensive against corrupted localStorage
 
 **In Progress:**
 - [ ] UI Framework completion (ChatPanel, Scenarios, Reports pages)

@@ -447,5 +447,25 @@ function SelectIcon({ className }: { className?: string }) {
   );
 }
 
+// Scenario Editor Page (for /scenarios/:id route)
+export function ScenarioEditorPlaceholder() {
+  return (
+    <div className={styles.page}>
+      <div className={styles.header}>
+        <h1 className={styles.title}>Scenario Editor</h1>
+      </div>
+      <div className={styles.content}>
+        <div className={styles.emptyState}>
+          <ScenarioEmptyIcon className={styles.emptyIcon} />
+          <h2 className={styles.emptyTitle}>Scenario Editor</h2>
+          <p className={styles.emptyDescription}>
+            Individual scenario editing view coming soon.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Export for routing
 export { Scenarios as ScenariosPlaceholder };

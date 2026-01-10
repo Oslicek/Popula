@@ -139,27 +139,6 @@ export function precomputePopulationByYear(
     });
     perYearFeatures.set(year, withColors);
     thresholdsMap.set(year, globalThresholds);
-
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/077d060f-f64b-4665-8ffb-d4911617c6a2', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: 'debug-session',
-        runId: 'pre-fix4',
-        hypothesisId: 'H_precompute_global',
-        location: 'populationData.ts:precomputePopulationByYear',
-        message: 'Precomputed year data with global thresholds',
-        data: {
-          year,
-          thresholds: globalThresholds,
-          colorsUsed: Array.from(colorsUsed),
-          featureCount: withColors.length
-        },
-        timestamp: Date.now()
-      })
-    }).catch(() => {});
-    // #endregion
   }
 
   return { perYearFeatures, thresholds: thresholdsMap };
@@ -236,22 +215,6 @@ export function createPopulationColorScale(
     thresholdsOverride && thresholdsOverride.length
       ? thresholdsOverride
       : computeQuantileThresholds(values, colors.length);
-
-  // #region agent log
-  fetch('http://127.0.0.1:7244/ingest/077d060f-f64b-4665-8ffb-d4911617c6a2', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      sessionId: 'debug-session',
-      runId: 'pre-fix1',
-      hypothesisId: 'H_thresholds',
-      location: 'populationData.ts:createPopulationColorScale',
-      message: 'Computed thresholds and colors',
-      data: { valuesCount: values.length, min: values[0] ?? null, max: values[values.length - 1] ?? null, thresholds, bucketCount },
-      timestamp: Date.now()
-    })
-  }).catch(() => {});
-  // #endregion
 
   return (population: number | null) => {
     if (population === null || !Number.isFinite(population)) return noDataColor;
