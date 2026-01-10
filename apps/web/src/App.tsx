@@ -3,7 +3,7 @@ import { AppShell } from './components/shell';
 
 // Placeholder pages - will be replaced with real implementations
 import { ExplorePlaceholder } from './pages/Explore/Explore';
-import { DataWorkspacePlaceholder } from './pages/DataWorkspace/DataWorkspace';
+import { DataWorkspace } from './pages/DataWorkspace/DataWorkspace';
 import { ScenariosPlaceholder, ScenarioEditorPlaceholder } from './pages/Scenarios/Scenarios';
 import { RunsPlaceholder, RunDetailPlaceholder, CompareViewPlaceholder } from './pages/Runs/Runs';
 import { ReportsPlaceholder } from './pages/Reports/Reports';
@@ -21,9 +21,9 @@ export function App() {
           <Route path="/explore" element={<ExplorePlaceholder />} />
           
           {/* Data Workspace */}
-          <Route path="/data" element={<DataWorkspacePlaceholder />} />
-          <Route path="/data/catalog" element={<DataWorkspacePlaceholder view="catalog" />} />
-          <Route path="/data/files" element={<DataWorkspacePlaceholder view="files" />} />
+          <Route path="/data" element={<DataWorkspace />} />
+          <Route path="/data/catalog" element={<DataWorkspace />} />
+          <Route path="/data/files" element={<DataWorkspace />} />
           
           {/* Scenarios */}
           <Route path="/scenarios" element={<ScenariosPlaceholder />} />

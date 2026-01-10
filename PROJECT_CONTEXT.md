@@ -1,6 +1,6 @@
 # Project Context
 
-> **Last Updated:** 2026-01-10 (v0.4.1)
+> **Last Updated:** 2026-01-10 (v0.4.2)
 
 ## Overview
 
@@ -259,6 +259,7 @@ Popula/
 | `MobileNav` | apps/web/src/components/shell/ | Bottom navigation (mobile) |
 | `useUiStore` | apps/web/src/stores/ | UI state: rail, chat, tray, devtools, mobile |
 | `useProjectStore` | apps/web/src/stores/ | Project management (Zustand, persisted) |
+| `useDataStore` | apps/web/src/stores/ | Data files management (Zustand, persisted) |
 | **Services** | | |
 | `NatsService` | apps/web/src/services/ | NATS WebSocket client (chunked encoding for large payloads) |
 | `GeoService` | apps/web/src/services/ | Rust worker geo processing client |
@@ -418,19 +419,24 @@ Popula/
   - Light theme MapLibre control styling
   - VFR XML upload for CZ regions
   - Animated map transitions between regions
+- [x] **Data Workspace Implementation** (v0.4.2)
+  - dataStore (Zustand) with TDD (12 tests)
+  - File list with search and type filtering
+  - File inspector panel with Details/Preview/Schema tabs
+  - Upload dialog with drag & drop
+  - CSV parsing with column detection and preview
+  - Dataset catalog placeholder (coming soon)
 
 **Test Coverage:**
-- TypeScript: 150 tests (149 passed, 1 skipped)
+- TypeScript: 256 tests (254 passed, 5 skipped)
 - Rust: 46 tests passing (CCM + handlers + storage)
-- Total: **196 tests**
+- Total: **302 tests**
 
 **In Progress:**
-- [ ] UI Framework completion (shared components, ChatPanel, page content)
+- [ ] UI Framework completion (ChatPanel, page content)
 
 **Pending:**
-- [ ] Shared UI components (Button, StatusBadge, Tabs, EntitySelector)
 - [ ] ChatPanel with LLM integration
-- [ ] Data Workspace implementation
 - [ ] Integrate projection charts into Explore Inspector
 - [ ] Shock modifier integration with CCM
 - [ ] Multi-region support
@@ -551,8 +557,9 @@ For each year t → t+1:
 8. ~~Export results to CSV/ZIP~~ ✅
 9. ~~UI Framework overhaul (AppShell, routing, stores)~~ ✅
 10. ~~Migrate Map components to Explore page~~ ✅
-11. Complete UI: shared components, ChatPanel, Data Workspace
-12. Integrate projection charts into Explore Inspector
+11. ~~Data Workspace implementation~~ ✅
+12. Complete UI: ChatPanel, Scenarios, Runs, Reports pages
+13. Integrate projection charts into Explore Inspector
 13. Add shock modifiers (pandemics, wars, crises)
 14. Multi-region support
 

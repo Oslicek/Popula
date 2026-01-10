@@ -5,58 +5,108 @@
  * - Dataset catalog
  * - Project files (uploaded/processed)
  * - GDAL tools
- * - Job console
+ * - File inspector
  */
 
+import { useState } from 'react';
+import { FileList, FileInspector, UploadDialog } from './components';
+import { Button } from '../../components/ui';
 import styles from './DataWorkspace.module.css';
 
-interface DataWorkspaceProps {
-  view?: 'catalog' | 'files';
-}
+type WorkspaceView = 'files' | 'catalog';
 
-export function DataWorkspacePlaceholder({ view = 'files' }: DataWorkspaceProps) {
+export function DataWorkspace() {
+  const [activeView, setActiveView] = useState<WorkspaceView>('files');
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+
   return (
     <div className={styles.workspace}>
+      {/* Header */}
       <div className={styles.header}>
-        <h1>Data Workspace</h1>
-        <div className={styles.tabs}>
-          <button className={`${styles.tab} ${view === 'catalog' ? styles.active : ''}`}>
-            Catalog
-          </button>
-          <button className={`${styles.tab} ${view === 'files' ? styles.active : ''}`}>
-            My Files
-          </button>
+        <div className={styles.headerLeft}>
+          <h1 className={styles.title}>Data Workspace</h1>
+        </div>
+        <div className={styles.headerRight}>
+          <Button variant="secondary" size="sm" leftIcon={<span>🌐</span>} disabled>
+            Fetch URL
+          </Button>
+          <Button size="sm" leftIcon={<span>📤</span>} onClick={() => setIsUploadOpen(true)}>
+            Upload
+          </Button>
         </div>
       </div>
-      
+
+      {/* Navigation tabs */}
+      <nav className={styles.nav}>
+        <button
+          className={`${styles.navItem} ${activeView === 'files' ? styles.active : ''}`}
+          onClick={() => setActiveView('files')}
+        >
+          📁 My Files
+        </button>
+        <button
+          className={`${styles.navItem} ${activeView === 'catalog' ? styles.active : ''}`}
+          onClick={() => setActiveView('catalog')}
+        >
+          📚 Catalog
+        </button>
+      </nav>
+
+      {/* Main content */}
       <div className={styles.content}>
-        <div className={styles.placeholder}>
-          <div className={styles.icon}>📁</div>
-          <h2>{view === 'catalog' ? 'Dataset Catalog' : 'Project Files'}</h2>
-          <p>
-            {view === 'catalog' 
-              ? 'Browse and import datasets from public sources'
-              : 'Manage your uploaded and processed files'}
-          </p>
-          <div className={styles.features}>
-            <div className={styles.feature}>
-              <strong>File Browser</strong>
-              <span>Navigate and organize your data files</span>
+        {activeView === 'files' ? (
+          <>
+            <div className={styles.fileListPanel}>
+              <FileList onUploadClick={() => setIsUploadOpen(true)} />
             </div>
-            <div className={styles.feature}>
-              <strong>GDAL Tools</strong>
-              <span>Convert, reproject, simplify, clip geometries</span>
-            </div>
-            <div className={styles.feature}>
-              <strong>Publish Flow</strong>
-              <span>Make processed files available for analysis</span>
+            <FileInspector />
+          </>
+        ) : (
+          <div className={styles.catalogView}>
+            <div className={styles.catalogPlaceholder}>
+              <div className={styles.catalogIcon}>📚</div>
+              <h2 className={styles.catalogTitle}>Dataset Catalog</h2>
+              <p className={styles.catalogDescription}>
+                Browse and import datasets from public sources into your project
+              </p>
+              <div className={styles.catalogFeatures}>
+                <div className={styles.catalogFeature}>
+                  <span className={styles.catalogFeatureIcon}>🇬🇧</span>
+                  <div className={styles.catalogFeatureText}>
+                    <strong>ONS Data</strong>
+                    <span>UK population projections, boundaries, census data</span>
+                  </div>
+                </div>
+                <div className={styles.catalogFeature}>
+                  <span className={styles.catalogFeatureIcon}>🇨🇿</span>
+                  <div className={styles.catalogFeatureText}>
+                    <strong>ČSÚ Data</strong>
+                    <span>Czech statistical office, SLDB census, VFR boundaries</span>
+                  </div>
+                </div>
+                <div className={styles.catalogFeature}>
+                  <span className={styles.catalogFeatureIcon}>🌍</span>
+                  <div className={styles.catalogFeatureText}>
+                    <strong>UN Data</strong>
+                    <span>World Population Prospects, demographic indicators</span>
+                  </div>
+                </div>
+                <div className={styles.catalogFeature}>
+                  <span className={styles.catalogFeatureIcon}>🗺️</span>
+                  <div className={styles.catalogFeatureText}>
+                    <strong>Natural Earth</strong>
+                    <span>Free vector and raster map data</span>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.comingSoon}>Coming Soon</div>
             </div>
           </div>
-          <p className={styles.note}>Coming in Phase 6</p>
-        </div>
+        )}
       </div>
+
+      {/* Upload dialog */}
+      <UploadDialog isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)} />
     </div>
   );
 }
-
-export { DataWorkspacePlaceholder as DataWorkspace };
