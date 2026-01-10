@@ -8,7 +8,6 @@ import { createPopulationColorScale } from '../Map/populationData';
 import { DENSITY_COLORS, REGION_FILL_COLOR, REGION_HOVER_COLOR, REGION_LINE_COLOR } from '../Map/constants';
 import { reprojectFeatureCollection5514ToWgs84 } from './reprojectionCz';
 import { parseCzPopulationCsvByYear, precomputeCzPopulationByYear, augmentCzFeatures } from './czPopulationData';
-import { parseVfrGmlToGeoJSON } from './vfrToGeojson';
 import { filterFeaturesByZoom } from './zoomFiltering';
 import { filterFeaturesByViewport, type BBox } from './viewportFiltering';
 import type { RegionProperties } from '../Map/types';
