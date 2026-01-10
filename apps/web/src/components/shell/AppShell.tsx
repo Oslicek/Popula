@@ -28,18 +28,29 @@ export function AppShell() {
     chatPanelOpen,
     isMobile,
     setIsMobile,
+    setRailCollapsed,
   } = useUIStore();
 
   // Handle responsive breakpoints
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+      const width = window.innerWidth;
+      const wasMobile = isMobile;
+      const newIsMobile = width < MOBILE_BREAKPOINT;
+      const isTablet = width >= MOBILE_BREAKPOINT && width < TABLET_BREAKPOINT;
+      
+      setIsMobile(newIsMobile);
+      
+      // Auto-collapse rail when entering tablet range
+      if (isTablet && !wasMobile && !railCollapsed) {
+        setRailCollapsed(true);
+      }
     };
 
     handleResize(); // Check on mount
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [setIsMobile]);
+  }, [setIsMobile, isMobile, railCollapsed, setRailCollapsed]);
 
   // Handle keyboard shortcuts
   useEffect(() => {

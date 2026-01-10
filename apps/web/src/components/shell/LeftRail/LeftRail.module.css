@@ -65,14 +65,10 @@
 }
 
 /* ============================================================
-   Responsive: Tablet (force collapsed)
+   Responsive: Tablet
+   Note: Rail width controlled by .collapsed class, not media query
+   This allows hamburger to still expand/collapse on tablet
    ============================================================ */
-
-@media (max-width: 1024px) {
-  .rail {
-    width: var(--rail-width-collapsed);
-  }
-}
 
 /* ============================================================
    Backdrop (for mobile drawer)
