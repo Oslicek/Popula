@@ -1,0 +1,110 @@
+/* ============================================================
+   StatusBadge Component
+   ============================================================ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+/* Sizes */
+.sm {
+  padding: 2px var(--space-1);
+  font-size: 10px;
+}
+
+.md {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.lg {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+/* Status variants */
+.queued {
+  background-color: #FEF3C7;
+  color: #92400E;
+}
+
+.running {
+  background-color: #DBEAFE;
+  color: #1E40AF;
+}
+
+.done {
+  background-color: #D1FAE5;
+  color: #065F46;
+}
+
+.failed {
+  background-color: #FEE2E2;
+  color: #991B1B;
+}
+
+.pending {
+  background-color: var(--color-gray-100);
+  color: var(--color-text-secondary);
+}
+
+.cancelled {
+  background-color: var(--color-gray-100);
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+/* Dot indicator */
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.queued .dot {
+  background-color: #F59E0B;
+}
+
+.running .dot {
+  background-color: #3B82F6;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.done .dot {
+  background-color: #10B981;
+}
+
+.failed .dot {
+  background-color: #EF4444;
+}
+
+.pending .dot {
+  background-color: var(--color-gray-400);
+}
+
+.cancelled .dot {
+  background-color: var(--color-gray-400);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* With icon */
+.icon {
+  font-size: 12px;
+  line-height: 1;
+}
