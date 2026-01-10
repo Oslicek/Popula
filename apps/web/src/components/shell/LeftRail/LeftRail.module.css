@@ -65,6 +65,14 @@
 }
 
 /* ============================================================
+   Mobile Close Button
+   ============================================================ */
+
+.mobileCloseButton {
+  display: none;
+}
+
+/* ============================================================
    Responsive: Tablet
    Note: Rail width controlled by .collapsed class, not media query
    This allows hamburger to still expand/collapse on tablet
@@ -123,5 +131,25 @@
 
   .collapseButton {
     display: none; /* Hide collapse button on mobile */
+  }
+
+  .mobileCloseButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text-secondary);
+    transition: var(--transition-base);
+  }
+
+  .mobileCloseButton:hover {
+    background-color: var(--color-gray-100);
+    color: var(--color-text-primary);
   }
 }

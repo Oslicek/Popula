@@ -22,7 +22,7 @@
 }
 
 .navItem.active {
-  background-color: var(--color-primary-50);
+  background-color: var(--color-primary-100);
   color: var(--color-primary-700);
 }
 

@@ -31,6 +31,15 @@ export function LeftRail({ collapsed }: LeftRailProps) {
       />
       
       <nav className={`${styles.rail} ${collapsed ? styles.collapsed : ''} ${mobileMenuOpen ? styles.mobileOpen : ''}`}>
+        {/* Mobile close button */}
+        <button 
+          className={styles.mobileCloseButton}
+          onClick={closeMobileMenu}
+          aria-label="Close menu"
+        >
+          <CloseIcon />
+        </button>
+        
         <div className={styles.navItems}>
         {/* Main Navigation */}
         <NavItem
@@ -163,6 +172,14 @@ function CollapseIcon({ collapsed }: { collapsed: boolean }) {
       style={{ transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
     >
       <path d="M10 4L6 8l4 4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" />
     </svg>
   );
 }
