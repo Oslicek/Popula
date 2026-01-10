@@ -1,6 +1,6 @@
 # Project Context
 
-> **Last Updated:** 2026-01-10 (v0.4.2)
+> **Last Updated:** 2026-01-10 (v0.4.3)
 
 ## Overview
 
@@ -166,6 +166,8 @@ Popula/
 │       │   │   ├── natsStore.ts    # Connection state + projection
 │       │   │   ├── uiStore.ts      # UI state (rail, chat, tray) ✅
 │       │   │   ├── projectStore.ts # Project management (renamed from workspace) ✅
+│       │   │   ├── dataStore.ts    # Data files management ✅
+│       │   │   ├── runsStore.ts    # Run history and comparison ✅
 │       │   │   ├── workspaceStore.ts # Legacy workspace store
 │       │   │   └── scenarioStore.ts
 │       │   └── pages/
@@ -260,6 +262,7 @@ Popula/
 | `useUiStore` | apps/web/src/stores/ | UI state: rail, chat, tray, devtools, mobile |
 | `useProjectStore` | apps/web/src/stores/ | Project management (Zustand, persisted) |
 | `useDataStore` | apps/web/src/stores/ | Data files management (Zustand, persisted) |
+| `useRunsStore` | apps/web/src/stores/ | Run history and comparison (Zustand, persisted) |
 | **Services** | | |
 | `NatsService` | apps/web/src/services/ | NATS WebSocket client (chunked encoding for large payloads) |
 | `GeoService` | apps/web/src/services/ | Rust worker geo processing client |
@@ -426,11 +429,19 @@ Popula/
   - Upload dialog with drag & drop
   - CSV parsing with column detection and preview
   - Dataset catalog placeholder (coming soon)
+- [x] **Runs Page Implementation** (v0.4.3)
+  - runsStore (Zustand) with TDD (22 tests)
+  - Runs list with filtering by type and status
+  - Run selection for comparison (up to 4 runs)
+  - Run detail page with configuration, results, timeline
+  - Compare view placeholder
+  - Status badges (queued, running, done, failed)
+  - Clear completed runs action
 
 **Test Coverage:**
-- TypeScript: 256 tests (254 passed, 5 skipped)
+- TypeScript: 288 tests (266 passed, 5 skipped)
 - Rust: 46 tests passing (CCM + handlers + storage)
-- Total: **302 tests**
+- Total: **334 tests**
 
 **In Progress:**
 - [ ] UI Framework completion (ChatPanel, page content)
@@ -558,7 +569,8 @@ For each year t → t+1:
 9. ~~UI Framework overhaul (AppShell, routing, stores)~~ ✅
 10. ~~Migrate Map components to Explore page~~ ✅
 11. ~~Data Workspace implementation~~ ✅
-12. Complete UI: ChatPanel, Scenarios, Runs, Reports pages
+12. ~~Runs page implementation~~ ✅
+13. Complete UI: ChatPanel, Scenarios, Reports pages
 13. Integrate projection charts into Explore Inspector
 13. Add shock modifiers (pandemics, wars, crises)
 14. Multi-region support

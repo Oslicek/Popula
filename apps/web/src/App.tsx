@@ -5,7 +5,7 @@ import { AppShell } from './components/shell';
 import { ExplorePlaceholder } from './pages/Explore/Explore';
 import { DataWorkspace } from './pages/DataWorkspace/DataWorkspace';
 import { ScenariosPlaceholder, ScenarioEditorPlaceholder } from './pages/Scenarios/Scenarios';
-import { RunsPlaceholder, RunDetailPlaceholder, CompareViewPlaceholder } from './pages/Runs/Runs';
+import { Runs, RunDetailPage, CompareView } from './pages/Runs/Runs';
 import { ReportsPlaceholder } from './pages/Reports/Reports';
 import { AdminPlaceholder, UsersPlaceholder, BillingPlaceholder, DevToolsPlaceholder } from './pages/Admin/Admin';
 
@@ -30,9 +30,9 @@ export function App() {
           <Route path="/scenarios/:id" element={<ScenarioEditorPlaceholder />} />
           
           {/* Runs */}
-          <Route path="/runs" element={<RunsPlaceholder />} />
-          <Route path="/runs/compare" element={<CompareViewPlaceholder />} />
-          <Route path="/runs/:id" element={<RunDetailPlaceholder />} />
+          <Route path="/runs" element={<Runs />} />
+          <Route path="/runs/compare" element={<CompareView />} />
+          <Route path="/runs/:id" element={<RunDetailPage />} />
           
           {/* Reports */}
           <Route path="/reports" element={<ReportsPlaceholder />} />
