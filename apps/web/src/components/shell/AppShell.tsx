@@ -16,6 +16,7 @@ import { TopBar } from './TopBar/TopBar';
 import { LeftRail } from './LeftRail/LeftRail';
 import { BottomTray } from './BottomTray/BottomTray';
 import { MobileNav } from './MobileNav/MobileNav';
+import { ChatPanel } from './ChatPanel';
 import { useUIStore } from '../../stores/uiStore';
 import styles from './AppShell.module.css';
 
@@ -84,11 +85,7 @@ export function AppShell() {
         {/* Chat Panel - Docked on right (desktop) or fullscreen (mobile) */}
         {chatPanelOpen && (
           <aside className={`${styles.chatPanel} ${isMobile ? styles.chatPanelMobile : ''}`}>
-            {/* ChatPanel component will go here */}
-            <div className={styles.chatPanelPlaceholder}>
-              <span>Chat Panel</span>
-              <small>Coming in Phase 5</small>
-            </div>
+            <ChatPanel />
           </aside>
         )}
       </div>
